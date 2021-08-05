@@ -1,0 +1,197 @@
+/*
+modified bootstrap css file for camscripter install app page
+
+*/
+
+:root {
+  --blue: #00b6c0;
+  --primary: #00b6c0;
+}
+
+a {
+  color: #00b6c0;
+}
+
+a:hover {
+  color: #038e96;
+}
+
+.btn-primary {
+  background-color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.btn-primary:hover {
+  background-color: #038e96;
+  border-color: #038e96;
+}
+
+
+.btn-primary:hover {
+  background-color: #038e96;
+  border-color: #038e96;
+}
+
+.btn-primary:focus, .btn-primary.focus {
+  box-shadow: 0 0 0 0.2rem rgba(72, 215, 186, 0.5);
+}
+
+.btn-primary.disabled, .btn-primary:disabled {
+  background-color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.btn-primary:not(:disabled):not(.disabled):active, .btn-primary:not(:disabled):not(.disabled).active,
+.show > .btn-primary.dropdown-toggle {
+  background-color: #038e96;
+  border-color: #00b6c0;
+}
+
+.btn-primary:not(:disabled):not(.disabled):active:focus, .btn-primary:not(:disabled):not(.disabled).active:focus,
+.show > .btn-primary.dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(72, 215, 186, 0.5);
+}
+
+.btn-outline-primary {
+  color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.btn-outline-primary:hover {
+  background-color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.btn-outline-primary:focus, .btn-outline-primary.focus {
+  box-shadow: 0 0 0 0.2rem rgba(72, 215, 186, 0.5);
+}
+
+.btn-outline-primary.disabled, .btn-outline-primary:disabled {
+  color: #00b6c0;
+}
+
+.btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active,
+.show > .btn-outline-primary.dropdown-toggle {
+  background-color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.btn-outline-primary:not(:disabled):not(.disabled):active:focus, .btn-outline-primary:not(:disabled):not(.disabled).active:focus,
+.show > .btn-outline-primary.dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(72, 215, 186, 0.5);
+}
+
+.btn-link {
+  color: #00b6c0;
+}
+
+.dropdown-item.active, .dropdown-item:active {
+  background-color: #00b6c0;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+  background-color: #00b6c0;
+}
+
+.custom-checkbox .custom-control-input:checked ~ .custom-control-label::before {
+  background-color: #00b6c0;
+}
+
+.custom-checkbox .custom-control-input:checked ~ .custom-control-label::before {
+  background-color: #00b6c0;
+}
+
+.custom-checkbox .custom-control-input:indeterminate ~ .custom-control-label::before {
+  background-color: #00b6c0;
+}
+
+.custom-checkbox .custom-control-input:disabled:checked ~ .custom-control-label::before {
+  background-color: rgba(72, 215, 186, 0.5);
+}
+
+.custom-checkbox .custom-control-input:disabled:indeterminate ~ .custom-control-label::before {
+  background-color: rgba(72, 215, 186, 0.5);
+}
+
+.custom-radio .custom-control-input:checked ~ .custom-control-label::before {
+  background-color: #00b6c0;
+}
+
+.custom-radio .custom-control-input:disabled:checked ~ .custom-control-label::before {
+  background-color: rgba(72, 215, 186, 0.5);
+}
+
+.custom-range::-webkit-slider-thumb {
+  background-color: #00b6c0;
+}
+
+.custom-range::-moz-range-thumb {
+  background-color: #00b6c0;
+}
+
+.custom-range::-ms-thumb {
+  background-color: #00b6c0;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  background-color: #00b6c0;
+}
+
+.page-link {
+  color: #00b6c0;
+}
+
+.page-item.active .page-link {
+  background-color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.badge-primary {
+  background-color: #00b6c0;
+}
+
+.badge-dark {
+  background-color: #15273D;
+}
+
+.progress-bar {
+  background-color: #00b6c0;
+}
+
+.list-group-item.active {
+  background-color: #00b6c0;
+  border-color: #00b6c0;
+}
+
+.bg-primary {
+  background-color: #00b6c0 !important;
+}
+
+a.bg-primary:hover, a.bg-primary:focus,
+button.bg-primary:hover,
+button.bg-primary:focus {
+  background-color: #00b6c0 !important;
+}
+
+.bg-dark {
+  background-color: #15273D !important;
+}
+
+a.bg-dark:hover, a.bg-dark:focus,
+button.bg-dark:hover,
+button.bg-dark:focus {
+  background-color: #15273D !important;
+}
+
+.border-primary {
+  border-color: #00b6c0 !important;
+}
+
+.text-primary {
+  color: #00b6c0 !important;
+}
+
+a.text-primary:hover, a.text-primary:focus {
+  color: #038e96 !important;
+}

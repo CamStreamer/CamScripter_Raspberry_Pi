@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (window.location.pathname == '/local/camscripter/settings.html') {
+      var queryString = '';
+      if (window.location.href.indexOf('?') !== -1)
+        queryString = window.location.href.slice(window.location.href.indexOf('?'))
+      window.location.replace('/local/camscripter/#VERSION/settings.html' + queryString);
+    }
+  </script>
+
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>CamScripter App</title>
+  <link rel="icon" class="serverURL" href="https://camstreamer.com//favicon.ico">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/libs/bootstrap.css">
+  <link rel="stylesheet" href="css/general.css">
+  <link rel="stylesheet" href="shared/bt_camscripter.css">
+  <link rel="stylesheet" href="shared/general.css">
+
+</head>
+<body style="background-color: #F5F5F5;">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <div class="navbar-header">
+    <a class="navbar-brand serverURL" target="_blank" href="https://camstreamer.com/"><img src="logo_CamStreamer.png" width="30" alt="Logo CamStreamer" /></a>
+    </div>
+    <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#navbarMainMenu" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMainMenu">
+      <nav class="nav justify-content-center" id="main_menu"></nav>
+    </div>
+  </div>
+</nav>
+<nav class="navbar navbar-expand-lg navbar-light bg-white text-uppercase">
+  <div class="container">
+      <ul class="nav navbar-nav mr-auto">
+        <li class="nav-item">
+          <a href="#" class="nav-link" id="add_new_package" data-toggle="modal" data-target="#uploadManager"><span class="fas fa-plus mr-2"></span>Add new package</a>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav ml-auto">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="fas fa-life-ring mr-2"></span>Help
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown" style="font-size: 14px;">
+            <p class="dropdown-header"><span class="fas fa-life-ring mr-2"></span>Help</p>
+            <a id="menu_help_item1" class="dropdown-item serverURL" target="_blank" href="https://camstreamer.com/faq">FAQ</a>
+            <a id="menu_help_item2" class="dropdown-item serverURL" target="_blank" href="https://camstreamer.com/api">API</a>
+            <div class="dropdown-divider"></div>
+            <a id="menu_help_item3" class="dropdown-item serverURL" target="_blank" href="https://camstreamer.com/eula">License Agreement</a>
+            <a id="menu_help_item5" class="dropdown-item serverURL" target="_blank" href="https://camstreamer.com/#contact">Contact us</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+</nav>
+<div class="container mt-2" id="alert-div">
+    <!-- container for alert -->
+</div>
+
+<div id="alert-div-fluid" style="position: fixed; z-index: 9999; top: 0; left: 0; right: 0;">
+    <!-- fluid container for alert -->
+</div>
+
+<div role="main" class="container mt-4">
+
+  <div class="content">
+    <div class="row">
+      <div class="col-md-3">
+        <span class="h6 text-dark text-uppercase">Installed packages</span>
+      </div>
+    </div>
+    <br>
+    <div id="content">
+
+    </div>
+    <small>Read <a href="https://github.com/CamStreamer/CamScripterApp_examples#camscripterapp_examples" target="_blank">here</a> how to create your own micro application for CamScripter App</small>
+  </div>
+</div>
+
+<div class="container mt-4 content">
+  <div class="row">
+    <div class="col">
+      <div class="card" id="system_log_div">
+        <div class="card-header">
+          <span class="h6 align-middle text-dark text-uppercase">System log
+            <div class="float-right btn-group border rounded" role="group" aria-label="Basic example">
+              <select name="syslog_select" id="system_log_select">
+                <option value="system" selected>System</option>
+              </select>
+              <a href="#" class="btn btn-sm btn-light" id="system_log_auto_reload_btn"><input type="checkbox" name="auto_reload" id="system_log_auto_reload" checked /> Auto reload</a>
+              <a target="_blank" href="/systemlog.cgi?package_name=system" id="syslog_new_tab" class="float-right btn btn-sm btn-light">Open in new tab</a>
+            </div>
+            <span class="badge mr-1 float-right" style="padding-bottom: 0;padding-top: 8px;" id="system_log_loading"><span class="h6 fas fa-circle-notch fa-spin text-primary"></span></span></span>
+        </div>
+        <div class="card-body" id="system_log_scroll">
+          <pre id="system_log" style="word-wrap: break-word; white-space: pre-wrap;">
+
+          </pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- /.container -->
+
+<!-- confirmDelete -->
+<div class="modal fade" id="confirmDelete" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
+        <h6 class="modal-title text-white">Confirm delete</h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmDeleteText"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmDeleteYes" data-remove="">Yes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- uploadManager -->
+<div class="modal fade" id="uploadManager" tabindex="-1" role="dialog" aria-labelledby="uploadManagerTitle" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
+        <h6 class="modal-title text-white" id="exampleModalCenterTitle">Upload package</h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form id="uploadManagerForm" class="form-horizontal has-validation-callback" action="" method="POST" enctype="multipart/form-data">
+      <div class="modal-body">
+        <p id="uploadedFileHelp" class="help-block"></p>
+        <div id="uploadedFileGroup" class="form-group">
+          <label>File</label>
+          <input class="form-control" type="file" id="pkg_name" name="pkg_name" data-validation="required extension" data-validation-allowing="zip" />
+        </div>
+        <p>Only ZIP file package is allowed.<p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button id="fileUpload" type="submit" class="btn btn-primary">Upload package</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- releaseNotesInfo -->
+<div class="modal fade" id="releaseNotesInfo" tabindex="-1" role="dialog" aria-labelledby="releaseNotesInfoTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
+        <h6 class="modal-title text-white">Prepare Update</h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="loadingDiv" class="text-center w-100"><span class="text-primary fas fa-2x fa-spinner fa-pulse"></span></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link" data-dismiss="modal">Close</button>
+        <button id="proceedUpdate" type="button" class="btn btn-primary" data-dismiss="modal" onclick="getUpdate('CamScripter', serverUrl, installPage, defaultPage)">Proceed Update</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="js/libs/jquery-3.3.1.min.js"></script>
+<script src="js/libs/bootstrap.bundle.min.js"></script>
+
+<script src="js/libs/jquery.form-validator.min.js"></script>
+
+<script src="js/libs/fa-solid.min.js"></script>
+<script src="js/libs/fontawesome.min.js"></script>
+
+<script src="js/main.js"></script>
+
+
+
+</body>
+</html>
