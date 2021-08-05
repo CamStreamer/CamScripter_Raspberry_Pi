@@ -1,20 +1,20 @@
-import * as fs from 'fs';
-import * as fse from 'fs-extra'
-import * as chokidar from 'chokidar';
-import * as path from 'path';
-import { ParamGroup } from './paramManager';
-import { logger, Enviroment } from './commonData';
-import { EventEmitter } from 'events';
-import { CamScripterMonitor } from './camscripterMonitor';
-import * as getport from 'get-port';
 import * as cp from 'child_process';
+import * as chokidar from 'chokidar';
+import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as fse from 'fs-extra';
+import * as getport from 'get-port';
+import * as path from 'path';
 
+import { CamScripterMonitor } from './camscripterMonitor';
+import { Enviroment, logger } from './commonData';
+import { ParamGroup } from './paramManager';
 
 type Manifest = {
     package_name: string;
     package_menu_name: string;
     ui_link: string;
-}
+};
 
 export class PackageManager extends EventEmitter {
     storage: string;
@@ -34,32 +34,42 @@ export class PackageManager extends EventEmitter {
         this.pckdir_watch = chokidar.watch(storage);
         this.ready = false;
 
-        this.pckdir_watch.on('addDir', async pathDir => {
+        this.pckdir_watch.on('addDir', async (pathDir) => {
             let parsed = path.parse(pathDir);
             if (parsed.dir === this.storage) {
-                logger.logInfo("Package added " + parsed.name);
-                let http_p = await getport({ port: getport.makeRange(52521, 52570) });
-                let http_pp = await getport({ port: getport.makeRange(52571, 52620) })
-                this.packages[parsed.name] = (new Package(`${this.storage}/${parsed.name}`, http_p, http_pp));
+                logger.logInfo('Package added ' + parsed.name);
+                let http_p = await getport({
+                    port: getport.makeRange(52521, 52570),
+                });
+                let http_pp = await getport({
+                    port: getport.makeRange(52571, 52620),
+                });
+                this.packages[parsed.name] = new Package(
+                    `${this.storage}/${parsed.name}`,
+                    http_p,
+                    http_pp
+                );
             }
         });
-        this.pckdir_watch.on('unlinkDir', pathDir => {
+        this.pckdir_watch.on('unlinkDir', (pathDir) => {
             let parsed = path.parse(pathDir);
             if (parsed.dir === this.storage) {
                 delete this.packages[parsed.name];
             }
         });
 
-        this.pckdir_watch.on('change', file_path => {
+        this.pckdir_watch.on('change', (file_path) => {
             let parsed = path.parse(file_path);
             let path_members = parsed.dir.split('/');
             let n = path_members.length;
-            let pckg_name = path_members[n - 2]
+            let pckg_name = path_members[n - 2];
 
-            if (parsed.name === 'settings'
-                && pckg_name in this.packages
-                && path_members[n - 1] === 'localdata'
-                && path_members.slice(0, n - 2).join('/') === this.storage) {
+            if (
+                parsed.name === 'settings' &&
+                pckg_name in this.packages &&
+                path_members[n - 1] === 'localdata' &&
+                path_members.slice(0, n - 2).join('/') === this.storage
+            ) {
                 this.packages[pckg_name].restart('SIGINT');
             }
         });
@@ -67,12 +77,11 @@ export class PackageManager extends EventEmitter {
         this.pckdir_watch.on('ready', () => {
             let packages = this.list();
             for (let name in this.packages) {
-                logger.logInfo("Package ready " + name);
+                logger.logInfo('Package ready ' + name);
             }
             this.ready = true;
             this.emit('ready');
         });
-
     }
 
     installPackage(tmp_file: string) {
@@ -80,28 +89,39 @@ export class PackageManager extends EventEmitter {
             let raw_manifest = fse.readFileSync(tmp_file + '/manifest.json');
             let manifest = JSON.parse(raw_manifest.toString());
             if ('required_camscripter_rbi_version' in manifest) {
-                let version = manifest['required_camscripter_rbi_version'].split('.');
+                let version =
+                    manifest['required_camscripter_rbi_version'].split('.');
 
-                if (version.length != this.version.length) throw 'Wrong manifest format';
+                if (version.length != this.version.length)
+                    throw 'Wrong manifest format';
 
                 for (let i = 0; i < this.version.length; i++) {
-                    if (Number.parseInt(version[i]) > Number.parseInt(this.version[i])) {
+                    if (
+                        Number.parseInt(version[i]) >
+                        Number.parseInt(this.version[i])
+                    ) {
                         throw 'Newer CSc-RBi version required';
-                    } else if (Number.parseInt(version[i]) < Number.parseInt(this.version[i])) {
+                    } else if (
+                        Number.parseInt(version[i]) <
+                        Number.parseInt(this.version[i])
+                    ) {
                         break;
                     }
                 }
             }
-            logger.logInfo("npm install run")
-            cp.execSync("npm install", {
-                cwd: tmp_file
+            logger.logInfo('npm install run');
+            cp.execSync('npm install', {
+                cwd: tmp_file,
             });
             this.lock();
-            let name = manifest["package_name"];
+            let name = manifest['package_name'];
             logger.logInfo('Package Manager: Installing package ' + name);
             let copy_filter = (src, dest) => {
                 let parsed = path.parse(dest);
-                if (parsed.dir === this.storage + `/${name}/localdata` && fs.existsSync(dest)) {
+                if (
+                    parsed.dir === this.storage + `/${name}/localdata` &&
+                    fs.existsSync(dest)
+                ) {
                     return false;
                 }
                 return true;
@@ -109,7 +129,9 @@ export class PackageManager extends EventEmitter {
 
             if (name in this.packages) {
                 if (this.packages[name].enabled) this.packages[name].stop();
-                fse.copySync(tmp_file, `${this.storage}/${name}`, { 'filter': copy_filter });
+                fse.copySync(tmp_file, `${this.storage}/${name}`, {
+                    filter: copy_filter,
+                });
             } else {
                 fse.copySync(tmp_file, `${this.storage}/${name}`);
             }
@@ -146,7 +168,7 @@ export class PackageManager extends EventEmitter {
 
         this.directive_params.on('refresh', () => {
             if (!this.lock_mode) {
-                logger.logInfo("Parameters applied!");
+                logger.logInfo('Parameters applied!');
                 for (let name in this.packages) {
                     if (name in params.value && params.value[name].enabled) {
                         this.packages[name].start();
@@ -162,14 +184,14 @@ export class PackageManager extends EventEmitter {
     list(): string[] {
         let packages = [];
         let filenames = fs.readdirSync(this.storage);
-        filenames.forEach(file => {
+        filenames.forEach((file) => {
             packages.push(file);
         });
         return packages;
     }
 
     listManifests(): Manifest[] {
-        let list = []
+        let list = [];
         for (let p in this.packages) {
             list.push(this.packages[p].readManifest());
         }
@@ -183,8 +205,11 @@ export class Package {
     enabled: boolean;
     process: CamScripterMonitor;
     env_vars: Enviroment;
-    constructor(storage: string, default_http_sockt: number, default_http_public: number) {
-
+    constructor(
+        storage: string,
+        default_http_sockt: number,
+        default_http_public: number
+    ) {
         this.storage = storage;
         this.manifest = this.readManifest();
         this.enabled = false;
@@ -192,16 +217,16 @@ export class Package {
             http_socket: default_http_sockt,
             http_socket_public: default_http_public,
             install_path: this.storage,
-            persistent_data_path: this.storage + '/localdata/'
+            persistent_data_path: this.storage + '/localdata/',
         };
         if (!fse.pathExistsSync(`${this.storage}/localdata`)) {
             fse.mkdirSync(`${this.storage}/localdata`);
         }
-        this.process = new (CamScripterMonitor)(this.storage + '/main.js', {
-            'cwd': this.storage,
-            'log_path': this.storage + '/localdata/log.txt',
-            'env': this.env_vars,
-            'restart_delay': 5000
+        this.process = new CamScripterMonitor(this.storage + '/main.js', {
+            cwd: this.storage,
+            log_path: this.storage + '/localdata/log.txt',
+            env: this.env_vars,
+            restart_delay: 5000,
         });
 
         this.process.on('start', () => {
@@ -212,7 +237,6 @@ export class Package {
         });
         this.process.on('stop', () => {
             logger.logInfo('Stopping package ' + this.manifest.package_name);
-
         });
     }
 
@@ -233,7 +257,7 @@ export class Package {
     }
 
     accessLogFile(): [fs.Stats, fse.ReadStream] {
-        let file_path = this.storage + '/localdata/log.txt'
+        let file_path = this.storage + '/localdata/log.txt';
         if (fse.pathExistsSync(file_path)) {
             let stat = fse.statSync(file_path);
             return [stat, fse.createReadStream(file_path)];

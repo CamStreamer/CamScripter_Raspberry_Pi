@@ -1,11 +1,11 @@
 import * as cp from 'child_process';
-import { logger, Enviroment } from './commonData';
+import { EventEmitter } from 'events';
+import { WriteStream } from 'fs';
+import * as fs from 'fs-extra';
 import * as readline from 'readline';
 import { Duplex, Readable, Stream } from 'stream';
-import * as fs from 'fs-extra';
-import { WriteStream } from 'fs';
-import { EventEmitter } from 'events';
 
+import { Enviroment, logger } from './commonData';
 
 type MonitorOptions = {
     env: Enviroment;
@@ -13,10 +13,9 @@ type MonitorOptions = {
     restart_delay: number;
     spin_time?: number;
     log_path: string;
-}
+};
 
 export class CamScripterMonitor extends EventEmitter {
-
     path: string;
     restart_delay: number;
     spin_time: number;
@@ -38,7 +37,6 @@ export class CamScripterMonitor extends EventEmitter {
         this.restart_delay = options.restart_delay; //ms
         this.spin_time = options.spin_time;
         this.log_path = options.log_path;
-
     }
 
     start() {
@@ -57,13 +55,14 @@ export class CamScripterMonitor extends EventEmitter {
             clearTimeout(this.timeout);
             this.enable = false;
             let current_process = this.process_control;
-            let murder_timeout = setTimeout(() => { this.brutalize(current_process); }, 1500);
+            let murder_timeout = setTimeout(() => {
+                this.brutalize(current_process);
+            }, 1500);
         } else if (this.process_control && this.enable) {
             clearTimeout(this.timeout);
             this.enable = false;
-
         } else {
-            throw 'This process has been set to stop'
+            throw 'This process has been set to stop';
         }
         this.emit('stop');
     }
@@ -71,7 +70,7 @@ export class CamScripterMonitor extends EventEmitter {
     restart(signal: NodeJS.Signals) {
         if (this.enable) {
             if (!this.process_control) {
-                throw 'There has to a process running to soft restart!'
+                throw 'There has to a process running to soft restart!';
             } else if (this.process_control.exitCode === null) {
                 this.process_control.kill(signal);
             }
@@ -87,29 +86,31 @@ export class CamScripterMonitor extends EventEmitter {
         }
         clearTimeout(this.timeout);
         this.emit('killed');
-
     }
 
     _newChildProcess() {
         this.process_stream = new Stream.PassThrough();
         this.process_log = readline.createInterface({
             input: this.process_stream,
-            output: process.stdout
+            output: process.stdout,
         });
         this.process_log.on('line', (line) => {
             let date = new Date();
-            fs.appendFileSync(this.log_path, date.toISOString() + ': ' + line + '\n');
+            fs.appendFileSync(
+                this.log_path,
+                date.toISOString() + ': ' + line + '\n'
+            );
         });
 
         this.process_control = cp.fork(this.path, {
             cwd: this.cwd,
             stdio: [null, 'pipe', 'pipe', 'ipc'],
             env: {
-                'HTTP_PORT': this.env.http_socket.toString(),
-                'HTTP_PORT_PUBLIC': this.env.http_socket_public.toString(),
-                'INSTALL_PATH': this.env.install_path.toString(),
-                'PERSISTENT_DATA_PATH': this.env.persistent_data_path.toString()
-            }
+                HTTP_PORT: this.env.http_socket.toString(),
+                HTTP_PORT_PUBLIC: this.env.http_socket_public.toString(),
+                INSTALL_PATH: this.env.install_path.toString(),
+                PERSISTENT_DATA_PATH: this.env.persistent_data_path.toString(),
+            },
         });
         this.process_control.stderr.pipe(this.process_stream);
         this.process_control.stdout.pipe(this.process_stream);
@@ -127,5 +128,4 @@ export class CamScripterMonitor extends EventEmitter {
             }, this.restart_delay);
         });
     }
-
 }

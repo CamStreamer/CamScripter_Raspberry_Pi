@@ -1,6 +1,5 @@
+import * as fs from 'fs-extra';
 import { ServerResponse } from 'http';
-import * as fs from 'fs-extra'
-
 
 export enum ResponseCode {
     OK = 200,
@@ -9,7 +8,11 @@ export enum ResponseCode {
     INTERNAL_ERROR = 500,
 }
 
-export function sendMessageResponse(res: ServerResponse, code: ResponseCode, message: string) {
+export function sendMessageResponse(
+    res: ServerResponse,
+    code: ResponseCode,
+    message: string
+) {
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (code == ResponseCode.INTERNAL_ERROR) {
@@ -21,7 +24,11 @@ export function sendMessageResponse(res: ServerResponse, code: ResponseCode, mes
     res.end(message);
 }
 
-export function sendJsonResponse(res: ServerResponse, code: ResponseCode, json_obj: object) {
+export function sendJsonResponse(
+    res: ServerResponse,
+    code: ResponseCode,
+    json_obj: object
+) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     let message = JSON.stringify(json_obj);
@@ -34,7 +41,12 @@ export function sendJsonResponse(res: ServerResponse, code: ResponseCode, json_o
     res.end(message);
 }
 
-export function sendParamResponse(res: ServerResponse, code: ResponseCode, param_name: string, json_obj: object) {
+export function sendParamResponse(
+    res: ServerResponse,
+    code: ResponseCode,
+    param_name: string,
+    json_obj: object
+) {
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Access-Control-Allow-Origin', '*');
     let data = param_name + '=' + JSON.stringify(json_obj);
@@ -48,9 +60,8 @@ export enum LogPriority {
     INFO,
     DEBUG,
     HTTP,
-    SILLY
+    SILLY,
 }
-
 
 class CustomLogger {
     path: string;
@@ -96,22 +107,22 @@ class CustomLogger {
             let date = new Date();
             fs.appendFileSync(path, date.toISOString() + ': ' + text + '\n');
         } catch (err) {
-            console.log("Log Err: " + err);
+            console.log('Log Err: ' + err);
         }
     }
 }
 
 export enum Paths {
     SYSLOG = './systemlog.txt',
-    PACKAGE = './package.json'
+    PACKAGE = './package.json',
 }
 
 const logger = new CustomLogger({
     path: Paths.SYSLOG,
-    level: LogPriority.HTTP
+    level: LogPriority.HTTP,
 });
 
-export { logger }
+export { logger };
 
 export function getVersion(): string[] {
     if (fs.existsSync(Paths.PACKAGE)) {
@@ -119,7 +130,7 @@ export function getVersion(): string[] {
         let pckg = JSON.parse(raw_pckg.toString());
         return pckg['version'].split('.');
     }
-    throw 'No version file found!'
+    throw 'No version file found!';
 }
 
 export type Enviroment = {
@@ -127,4 +138,4 @@ export type Enviroment = {
     http_socket_public: number;
     persistent_data_path: string;
     install_path: string;
-}
+};

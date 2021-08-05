@@ -10,7 +10,4 @@ To access GUI please type http://localhost:52520/settings.html into your browser
 Temporary run can be terminated simply by stadard means of ending a running process on your device.
 Permanent run uses `systemd` to keep itself alive as a system service. To turn it off type: `systemctl stop camscripter.service`. This command will stop the process of CSc-Rbi but will not affect its status as registered service.
 To start the porcess again type `systemctl start camscripter.service`.
-## Instalation (TODO)
-
-- postisntall echo s manuálem (CSc najdete na adrese té a té)
 

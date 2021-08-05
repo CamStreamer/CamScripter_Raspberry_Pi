@@ -1,19 +1,24 @@
-import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
-import { URL } from 'url';
-import * as formidable from 'formidable';
-import { logger } from './commonData';
-import * as path from 'path';
 import { EventEmitter } from 'events';
-import * as http_proxy from 'http-proxy'
+import * as formidable from 'formidable';
+import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
+import * as http_proxy from 'http-proxy';
+import * as path from 'path';
+import { URL } from 'url';
 
+import { logger } from './commonData';
 
 type RequestHandle = {
     (url: URL, res: ServerResponse): void;
-}
+};
 
 type DataHandle = {
-    (url: URL, res: ServerResponse, files: formidable.Files, fields: formidable.Fields): void;
-}
+    (
+        url: URL,
+        res: ServerResponse,
+        files: formidable.Files,
+        fields: formidable.Fields
+    ): void;
+};
 
 export class HttpServer extends EventEmitter {
     server: Server;
@@ -42,25 +47,27 @@ export class HttpServer extends EventEmitter {
             proxyReq.path = '/' + items.slice(3).join('/');
         });
 
-        this.server.on('request', (req: IncomingMessage, res: ServerResponse) => {
-            logger.logHttp('Http-Server: Incomming request ' + req.url);
-            let url = new URL(req.url, this.server_origin);
-            let ext = path.parse(url.pathname).ext;
-            if (url.pathname.match(/proxy/)) {
-                let start_i = req.url.search(/proxy/);
-                let rest = req.url.slice(start_i);
-                this.emit('proxy', rest, req, res, this.proxy, false);
-            } else if (url.pathname.match(/proxy_public/)) {
-                let start_i = req.url.search(/proxy_public/);
-                let rest = req.url.slice(start_i);
-                this.emit('proxy', rest, req, res, this.proxy, true);
-            } else if (ext === '.cgi') {
-                this._handleCGI(req, res);
-            } else {
-                this.emit('filerequest', req.url, res);
+        this.server.on(
+            'request',
+            (req: IncomingMessage, res: ServerResponse) => {
+                logger.logHttp('Http-Server: Incomming request ' + req.url);
+                let url = new URL(req.url, this.server_origin);
+                let ext = path.parse(url.pathname).ext;
+                if (url.pathname.match(/proxy/)) {
+                    let start_i = req.url.search(/proxy/);
+                    let rest = req.url.slice(start_i);
+                    this.emit('proxy', rest, req, res, this.proxy, false);
+                } else if (url.pathname.match(/proxy_public/)) {
+                    let start_i = req.url.search(/proxy_public/);
+                    let rest = req.url.slice(start_i);
+                    this.emit('proxy', rest, req, res, this.proxy, true);
+                } else if (ext === '.cgi') {
+                    this._handleCGI(req, res);
+                } else {
+                    this.emit('filerequest', req.url, res);
+                }
             }
-        });
-
+        );
     }
 
     _handleCGI(req: IncomingMessage, res: ServerResponse) {
@@ -71,7 +78,7 @@ export class HttpServer extends EventEmitter {
             if (url.pathname.match(cgi_url)) {
                 let form = formidable({
                     multiples: false,
-                    uploadDir: process.cwd() + '/tmp'
+                    uploadDir: process.cwd() + '/tmp',
                 });
                 form.parse(req, (err, fields, files) => {
                     this.data_handles[cgi_url](url, res, files, fields);

@@ -1,7 +1,8 @@
-import * as fs from 'fs';
-import { EventEmitter } from 'events';
 import * as chokidar from 'chokidar';
+import { EventEmitter } from 'events';
+import * as fs from 'fs';
 import * as path from 'path';
+
 import { logger } from './commonData';
 
 export class ParamManager extends EventEmitter {
@@ -16,16 +17,18 @@ export class ParamManager extends EventEmitter {
         this.ready = false;
         this.params = {};
 
-
-        this.watch_dog.on('add', pathFile => {
+        this.watch_dog.on('add', (pathFile) => {
             let parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
-                this.params[parsed.name] = new ParamGroup(parsed.name, pathFile);
+                this.params[parsed.name] = new ParamGroup(
+                    parsed.name,
+                    pathFile
+                );
             }
             this.emit('new', parsed.name);
         });
 
-        this.watch_dog.on('change', pathFile => {
+        this.watch_dog.on('change', (pathFile) => {
             let parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
                 logger.logInfo('Refreshing: ' + parsed.name);
@@ -36,11 +39,14 @@ export class ParamManager extends EventEmitter {
 
         this.watch_dog.on('ready', () => {
             let filenames = fs.readdirSync(this.storage);
-            filenames.forEach(file => {
+            filenames.forEach((file) => {
                 let parsed = path.parse(file);
                 if (parsed.ext === '.json') {
                     logger.logDebug('Param loaded: ' + parsed.name);
-                    this.params[parsed.name] = new ParamGroup(parsed.name, this.storage + file);
+                    this.params[parsed.name] = new ParamGroup(
+                        parsed.name,
+                        this.storage + file
+                    );
                 }
             });
             this.ready = true;
@@ -85,7 +91,12 @@ export class ParamGroup extends EventEmitter {
     refresh(): void {
         let raw_json = fs.readFileSync(this.file_name);
         this.value = JSON.parse(raw_json.toString());
-        logger.logDebug('Parameter ' + this.name + ' new value: ' + JSON.stringify(this.value));
+        logger.logDebug(
+            'Parameter ' +
+                this.name +
+                ' new value: ' +
+                JSON.stringify(this.value)
+        );
         this.emit('refresh');
     }
 }

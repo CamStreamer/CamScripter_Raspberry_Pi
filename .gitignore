@@ -3,3 +3,4 @@ dist
 params
 packages
 systemlog.txt
+.npmrc
