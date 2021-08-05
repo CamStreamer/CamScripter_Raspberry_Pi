@@ -1,0 +1,6 @@
+node_modules
+dist
+params
+packages
+systemlog.txt
+.npmrc

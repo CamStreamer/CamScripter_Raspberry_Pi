@@ -1,0 +1,25 @@
+#
+# Camscripter RPi.
+#
+# repo:
+#
+
+[Unit]
+Description=CamScripter RPi run.
+After=network.target
+
+[Service]
+WorkingDirectory=/home/pyzmon/Git/camscripter-raspberry
+ExecStart=/usr/bin/node /home/pyzmon/Git/camscripter-raspberry/dist/main.js
+ExecStop=/usr/bin/node /home/pyzmon/Git/camscripter-raspberry/dist/main.js agent stop
+Restart=always
+LimitNOFILE=1000000
+User=pyzmon
+KillMode=mixed
+KillSignal=SIGTERM
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
