@@ -68,3 +68,34 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #333;
 }
+
+#main_menu {
+  margin-bottom: -9px;
+}
+
+.btn-menu {
+  padding-bottom: 15px;
+  border-radius: 0;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  background-color:transparent;
+  margin-bottom: 0;
+  color: #FFF;
+}
+
+.btn-menu:hover, .btn-menu:focus {
+  background-color: rgba(255,255,255,0.05);
+  color: #FFF;
+}
+
+.btn-menu.active {
+  background-color:#FFF;
+  color: #000;
+}
+
+@media (max-width: 990px) {
+  .btn-menu {
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+}

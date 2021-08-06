@@ -7,7 +7,8 @@ import * as getport from 'get-port';
 import * as path from 'path';
 
 import { CamScripterMonitor } from './camscripterMonitor';
-import { Enviroment, logger } from './commonData';
+import { Enviroment } from './commonData';
+import { logger } from './logger';
 import { ParamGroup } from './paramManager';
 
 type Manifest = {

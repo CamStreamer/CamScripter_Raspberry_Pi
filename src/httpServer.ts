@@ -5,7 +5,7 @@ import * as http_proxy from 'http-proxy';
 import * as path from 'path';
 import { URL } from 'url';
 
-import { logger } from './commonData';
+import { logger } from './logger';
 
 type RequestHandle = {
     (url: URL, res: ServerResponse): void;
