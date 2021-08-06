@@ -9,7 +9,7 @@ npm install -g camscripter-rabsberry
 
 You can also install CamScripter localy for better accessibility to the files with command
 ```
-npm install -g camscripter-rabsberry
+npm install camscripter-rabsberry
 ```
 CamScripter will be automaticaly registered as systemd service, which will start with your computer.
 If you want to access CamScripter only on temporal basis, you can run `systemd_unregister.sh` from the root directory.
