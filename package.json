@@ -21,10 +21,11 @@
     "scripts": {
         "clean": "rimraf dist/*",
         "build": "npm-run-all clean tsc",
-        "postbuild": "./prepare_env.sh",
+        "enviroment": "./prepare_env.sh",
         "tsc": "tsc",
         "start": "ts-node ./src/main.ts",
-        "postinstall": "./systemd_register.sh",
+        "postinstall": "npm run enviroment",
+        "postenviroment": "./systemd_register.sh",
         "preuninstall": "./systemd_unregister.sh",
         "pretty": "prettier --write \"./src/*.{ts,tsx}\"",
         "pretty:check": "prettier --check \"./src/*.{ts,tsx}\""
