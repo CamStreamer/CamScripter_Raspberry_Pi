@@ -5,7 +5,8 @@ import * as fs from 'fs-extra';
 import * as readline from 'readline';
 import { Duplex, Readable, Stream } from 'stream';
 
-import { Enviroment, logger } from './commonData';
+import { Enviroment } from './commonData';
+import { logger } from './logger';
 
 type MonitorOptions = {
     env: Enviroment;

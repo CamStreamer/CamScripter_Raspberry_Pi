@@ -5,16 +5,15 @@ import { IncomingMessage, ServerResponse } from 'http';
 import * as http_proxy from 'http-proxy';
 import * as path from 'path';
 
+import { getVersion, Paths } from './commonData';
 import {
-    getVersion,
-    logger,
-    Paths,
     ResponseCode,
     sendJsonResponse,
     sendMessageResponse,
     sendParamResponse,
-} from './commonData';
+} from './httpRespond';
 import { HttpServer } from './httpServer';
+import { logger } from './logger';
 import { PackageManager } from './packageManager';
 import { ParamManager } from './paramManager';
 

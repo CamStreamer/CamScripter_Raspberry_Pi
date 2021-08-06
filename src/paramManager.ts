@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { logger } from './commonData';
+import { logger } from './logger';
 
 export class ParamManager extends EventEmitter {
     storage: string;
