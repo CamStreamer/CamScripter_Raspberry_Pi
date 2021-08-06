@@ -24,6 +24,7 @@
         "postbuild": "./prepare_env.sh",
         "tsc": "tsc",
         "start": "ts-node ./src/main.ts",
+        "postinstall": "./systemd_register.sh",
         "preuninstall": "./systemd_unregister.sh",
         "pretty": "prettier --write \"./src/*.{ts,tsx}\"",
         "pretty:check": "prettier --check \"./src/*.{ts,tsx}\""

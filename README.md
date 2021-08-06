@@ -4,12 +4,12 @@
 
 To install CamScripter on your device run the following command:
 ```
-npm install -g camscripter
+npm install -g camscripter-rabsberry
 ```
 
 You can also install CamScripter localy for better accessibility to the files with command
 ```
-npm install -g camscripter
+npm install -g camscripter-rabsberry
 ```
 CamScripter will be automaticaly registered as systemd service, which will start with your computer.
 If you want to access CamScripter only on temporal basis, you can run `systemd_unregister.sh` from the root directory.
@@ -29,11 +29,11 @@ To start the porcess again type `systemctl start camscripter.service`.
 ## Removal
 To remove CamScripter from your device please type :
 ```
-npm uninstall -g camscripter
+npm uninstall -g camscripter-rabsberry
 ```
  or
  ```
-npm uninstall camscripter
+npm uninstall camscripter-rabsberry
 ```
 depending on the manner in which was your vesion installed. This will automatically unregister CamScripter service from systemd.
 If you removed CamScripter in less formal fashion it might be nessessary to manualy remove Camscripter systemd service file and diable the service.
