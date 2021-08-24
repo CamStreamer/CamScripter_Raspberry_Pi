@@ -7,9 +7,9 @@ Description=CamScripter RPi run.
 After=network.target
 
 [Service]
-WorkingDirectory=$(pwd)
-ExecStart=/usr/bin/node $(pwd)/dist/main.js
-ExecStop=/usr/bin/node $(pwd)/dist/main.js agent stop
+WorkingDirectory=$SCRIPT_PATH
+ExecStart=/usr/bin/node $SCRIPT_PATH/dist/main.js
+ExecStop=/usr/bin/node $SCRIPT_PATH/dist/main.js agent stop
 Restart=always
 LimitNOFILE=1000000
 User=$( whoami )
@@ -23,8 +23,8 @@ WantedBy=multi-user.target
 " > camscripter.service
 echo "CamScripter Rabsberry will be registered as systemd service."
 sudo cp camscripter.service /etc/systemd/system/camscripter.service
-rm camscripter.service
 sudo chmod 644 /etc/systemd/system/camscripter.service
 sudo systemctl start camscripter
 sudo systemctl enable camscripter
+rm camscripter.service
 echo "CamScripter is running"
