@@ -21,7 +21,7 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 " > camscripter.service
-echo "CamScripter Rabsberry will be registered as systemd service."
+echo "CamScripter Raspberry will be registered as systemd service."
 sudo cp camscripter.service /etc/systemd/system/camscripter.service
 sudo chmod 644 /etc/systemd/system/camscripter.service
 sudo systemctl start camscripter

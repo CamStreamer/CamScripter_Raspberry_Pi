@@ -1,5 +1,10 @@
 # Camscripter Raspberry
 
+## Access
+
+Access your device via `ssh`. On Windows you can use SSH client such as (Putty)[https://www.putty.org/].
+Type in `ssh pi@Your_IP_Address`.
+
 ## Installation
 
 To install CamScripter on your device run the following command:
@@ -26,7 +31,7 @@ To start the porcess again type `systemctl start camscripter.service`.
 ## Removal
 To remove CamScripter from your device please type :
 ```
-sudo npm uninstall -g camscripter-rabsberry
+sudo npm uninstall -g camscripter-raspberry
 ```
 As of today `npm` has no mechanism alowing for hooking automated scripts to package uninstall. Therefore you need to run ```camscripter-unregister``` first.
 If you removed CamScripter in less formal fashion it might be nessessary to manualy remove Camscripter systemd service file or other leftover artefacts and disable the service.
