@@ -2,7 +2,7 @@
 
 ## Access
 
-Access your device via `ssh`. On Windows you can use SSH client such as (Putty)[https://www.putty.org/].
+Access your device via `ssh`. On Windows you can use SSH client such as [Putty](https://www.putty.org/).
 Type in `ssh pi@Your_IP_Address`.
 
 ## Installation
