@@ -4,7 +4,7 @@
 
 To install CamScripter on your device run the following command:
 ```
-sudo npm install -g camscripter-rabsberry
+sudo npm install -g camscripter-raspberry
 ```
 Thus camscripter interface will become available in you command line.
 CamScripter will be automaticaly registered as systemd service, which will start with your computer.
