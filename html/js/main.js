@@ -161,7 +161,7 @@ function upload_package_action() {
       contentType: false,
       processData: false,
       complete: function () {
-        //stopRunningPackage(name[0]);
+        stopRunningPackage(name[0]);
         getPackageList(); //render packages again
       },
       success: function (response) {

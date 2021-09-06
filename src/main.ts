@@ -88,8 +88,8 @@ http_server.on('filerequest', (raw_url: string, res: ServerResponse) => {
     } else {
         let file_path =
             raw_url in aliases
-                ? './html/' + path.normalize(aliases[raw_url])
-                : './html/' + path.normalize(raw_url);
+                ? './html' + path.normalize(aliases[raw_url])
+                : './html' + path.normalize(raw_url);
         let parsed = path.parse(file_path);
         if (fs.pathExistsSync(file_path)) {
             let stat = fs.statSync(file_path);
