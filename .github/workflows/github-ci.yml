@@ -31,9 +31,8 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       # Runs a single command using the runners shell
-      - name: Greetings and Init
+      - name: Init
         run: |
-          echo Hello, world!
           npm install --production=false
 
       # Runs a set of commands using the runners shell

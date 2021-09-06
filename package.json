@@ -1,7 +1,7 @@
 {
     "name": "camscripter-raspberry",
     "version": "1.1.4",
-    "description": "CamScripter Rapsberry",
+    "description": "CamScripter Raspberry",
     "repository": {
         "type": "git",
         "url": ""
@@ -33,7 +33,6 @@
         "register": "./systemd_register.sh",
         "unregister": "./systemd_unregister.sh",
         "postenviroment": "npm run register",
-        "uninstall": "npm run unregister",
         "pretty": "prettier --write \"./src/*.{ts,tsx}\"",
         "pretty:check": "prettier --check \"./src/*.{ts,tsx}\""
     },
