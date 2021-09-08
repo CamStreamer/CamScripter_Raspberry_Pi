@@ -26,7 +26,7 @@ Server can be found on adress 0.0.0.0, port 52520. This means the port 52520 wil
 ## Turning off
 Temporary run can be terminated simply by standard means of ending a running process on your device.
 Permanent run uses `systemd` to keep itself alive as a system service. To turn it off type: `systemctl stop camscripter.service`. This command will stop the process of CSc-Rbi but will not affect its status as registered service.
-To start the porcess again type `systemctl start camscripter.service`.
+To start the process again type `systemctl start camscripter.service`.
 For removing CamScripter from systemd services please run `camscripter-unregister`.
 
 
