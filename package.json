@@ -34,7 +34,8 @@
         "unregister": "./systemd_unregister.sh",
         "postenviroment": "npm run register",
         "pretty": "prettier --write \"./src/*.{ts,tsx}\"",
-        "pretty:check": "prettier --check \"./src/*.{ts,tsx}\""
+        "pretty:check": "prettier --check \"./src/*.{ts,tsx}\"",
+        "test": "echo \"Error: no test specified\""
     },
     "keywords": [],
     "author": "",
