@@ -30,6 +30,7 @@
         "tsc": "tsc",
         "start": "ts-node ./src/main.ts",
         "postinstall": "npm run enviroment",
+        "prepublishOnly": "npm run build",
         "register": "./systemd_register.sh",
         "unregister": "./systemd_unregister.sh",
         "postenviroment": "npm run register",
