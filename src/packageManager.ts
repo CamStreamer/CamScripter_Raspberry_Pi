@@ -111,7 +111,7 @@ export class PackageManager extends EventEmitter {
                 }
             }
             logger.logInfo('npm install run');
-            cp.execSync('npm install', {
+            cp.execSync('sudo npm install', {
                 cwd: tmp_file,
             });
             this.lock();
