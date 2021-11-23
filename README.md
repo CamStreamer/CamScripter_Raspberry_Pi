@@ -1,5 +1,9 @@
 # Camscripter Raspberry
 
+## Compatibility
+npm v7.24
+node v16.x.xx
+
 ## Access
 
 Access your device via `ssh`. On Windows you can use SSH client such as [Putty](https://www.putty.org/).
