@@ -1,8 +1,11 @@
 import * as AdmZip from 'adm-zip';
+import * as archiver from 'archiver';
+
 import { Fields, Files } from 'formidable';
 import * as fs from 'fs-extra';
 import { IncomingMessage, ServerResponse } from 'http';
 import * as http_proxy from 'http-proxy';
+import { arch } from 'os';
 import * as path from 'path';
 
 import { getVersion, Paths } from './commonData';
@@ -11,6 +14,7 @@ import {
     sendJsonResponse,
     sendMessageResponse,
     sendParamResponse,
+    sendArchiverResponse,
 } from './httpRespond';
 import { HttpServer } from './httpServer';
 import { logger } from './logger';
@@ -294,6 +298,51 @@ http_server.registerDataCGI(
 
 http_server.registerRequestCGI('/package/list.cgi', (url, res) => {
     sendJsonResponse(res, ResponseCode.OK, pckg_manager.listManifests());
+});
+
+http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files, fields: Fields) => {
+    let pckg_name = url.searchParams.get('package_name');
+    let action = url.searchParams.get('action');
+    let compression_level = parseInt(url.searchParams.get('compression_level'));
+    switch (action) {
+        case "IMPORT":
+            let return_code = ResponseCode.OK;
+            let return_message = 'OK';
+            for (let i in files) {
+                let name = path.parse(files[i]['name']);
+                let fpath = files[i]['path'];
+                if (name.ext === '.zip') {
+                    logger.logInfo('HTTPApi: localdata imported under name ' + name.base);
+                    let zip = new AdmZip(fpath);
+                    zip.extractAllTo(process.cwd() + '/tmp_data/' + name.name);
+                    try {
+                        let pckg = pckg_manager.packages[pckg_name];
+                        let localdata_path = pckg.env_vars.persistent_data_path;
+                        fs.removeSync(localdata_path);
+                        fs.copySync(process.cwd() + '/tmp_data/' + name.name, localdata_path);
+                    } catch (err) {
+                        return_code = ResponseCode.INTERNAL_ERROR;
+                        return_message = err;
+                    } finally {
+                        fs.removeSync(process.cwd() + '/tmp_data/' + name.name);
+                    }
+                } else {
+                    logger.logError('HTTPApi: wrong extention recieved ');
+                }
+                fs.removeSync(fpath);
+            }
+            sendMessageResponse(res, return_code, return_message);
+            break;
+        case "EXPORT":
+            let archie = archiver('zip', { zlib: { level: compression_level } })
+            let pckg = pckg_manager.packages[pckg_name];
+            let localdata_path = pckg.env_vars.persistent_data_path;
+            archie.directory(localdata_path, false);
+            await sendArchiverResponse(res, ResponseCode.OK, archie);
+            break;
+        default:
+            sendMessageResponse(res, ResponseCode.BAD_REQ, "Invalid action")
+    }
 });
 
 http_server.registerRequestCGI('/package/remove.cgi', (url, res) => {

@@ -1,6 +1,7 @@
 import { ServerResponse } from 'http';
-
+import * as fs from 'fs-extra';
 import { logger } from './logger';
+import { Archiver } from 'archiver';
 
 export enum ResponseCode {
     OK = 200,
@@ -53,4 +54,16 @@ export function sendParamResponse(
     let data = param_name + '=' + JSON.stringify(json_obj);
     res.statusCode = code;
     res.end(data);
+}
+
+export async function sendArchiverResponse(
+    res: ServerResponse,
+    code: ResponseCode,
+    archive: Archiver
+) {
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Length', archive.pointer());
+    res.statusCode = code;
+    archive.pipe(res);
+    await archive.finalize();
 }
