@@ -56,14 +56,15 @@ export function sendParamResponse(
     res.end(data);
 }
 
-export async function sendArchiverResponse(
+export function sendArchiverResponse(
     res: ServerResponse,
     code: ResponseCode,
-    archive: Archiver
+    file_path: string
 ) {
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Length', archive.pointer());
+    let stat = fs.statSync(file_path);
+    res.setHeader('Content-Length', stat.size);
     res.statusCode = code;
-    archive.pipe(res);
-    await archive.finalize();
+    let stream = fs.createReadStream(file_path);
+    stream.pipe(res);
 }

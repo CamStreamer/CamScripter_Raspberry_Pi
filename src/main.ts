@@ -334,11 +334,20 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
             sendMessageResponse(res, return_code, return_message);
             break;
         case "EXPORT":
-            let archie = archiver('zip', { zlib: { level: compression_level } })
+            let archie = archiver('zip', { zlib: { level: compression_level || 9 } })
             let pckg = pckg_manager.packages[pckg_name];
             let localdata_path = pckg.env_vars.persistent_data_path;
+            let temp = process.cwd() + '/tmp_data/' + pckg_name + "_localdata.zip"
+            let output = fs.createWriteStream(temp);
+            output.on('close', function() {
+                console.log(archie.pointer() + ' total bytes');
+                console.log('archiver has been finalized and the output file descriptor has closed.');
+                sendArchiverResponse(res, ResponseCode.OK, temp);
+                fs.removeSync(temp);
+            });
+            archie.pipe(output);
             archie.directory(localdata_path, false);
-            await sendArchiverResponse(res, ResponseCode.OK, archie);
+            await archie.finalize();
             break;
         default:
             sendMessageResponse(res, ResponseCode.BAD_REQ, "Invalid action")
