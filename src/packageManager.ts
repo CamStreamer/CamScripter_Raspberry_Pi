@@ -32,7 +32,9 @@ export class PackageManager extends EventEmitter {
         this.storage = storage;
         this.packages = {};
         this.version = version;
-        this.pckdir_watch = chokidar.watch(storage);
+        this.pckdir_watch = chokidar.watch(storage, {
+            depth: 1,
+        });
         this.ready = false;
 
         this.pckdir_watch.on('addDir', async (pathDir) => {
