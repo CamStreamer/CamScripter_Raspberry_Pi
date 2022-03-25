@@ -107,8 +107,8 @@ export class CamScripterMonitor extends EventEmitter {
             cwd: this.cwd,
             stdio: [null, 'pipe', 'pipe', 'ipc'],
             env: {
-                HTTP_PORT: this.env.http_socket.toString(),
-                HTTP_PORT_PUBLIC: this.env.http_socket_public.toString(),
+                HTTP_PORT: this.env.http_port.toString(),
+                HTTP_PORT_PUBLIC: this.env.http_port_public.toString(),
                 INSTALL_PATH: this.env.install_path.toString(),
                 PERSISTENT_DATA_PATH: this.env.persistent_data_path.toString(),
             },

@@ -136,11 +136,11 @@ http_server.on(
                 if (is_public) {
                     target_port =
                         pckg_manager.packages[package_name].env_vars
-                            .http_socket_public;
+                            .http_port_public;
                 } else {
                     target_port =
                         pckg_manager.packages[package_name].env_vars
-                            .http_socket;
+                            .http_port;
                 }
                 req.url = '/' + rest;
                 proxy_mirror.web(req, res, {

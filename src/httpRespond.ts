@@ -1,5 +1,4 @@
 import { ServerResponse } from 'http';
-import * as fs from 'fs-extra';
 import { logger } from './logger';
 import { Archiver } from 'archiver';
 
