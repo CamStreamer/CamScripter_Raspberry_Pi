@@ -15,8 +15,8 @@ export function getVersion(): string[] {
 }
 
 export type Enviroment = {
-    http_socket: number;
-    http_socket_public: number;
+    http_port: number;
+    http_port_public: number;
     persistent_data_path: string;
     install_path: string;
 };

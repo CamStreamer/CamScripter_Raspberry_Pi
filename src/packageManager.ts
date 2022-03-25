@@ -21,6 +21,7 @@ export class PackageManager extends EventEmitter {
     storage: string;
     packages: { [key: string]: Package };
     pckdir_watch: chokidar.FSWatcher;
+    settings_watch: chokidar.FSWatcher;
     directive_params: ParamGroup;
     version: string[];
     lock_mode: boolean;
@@ -32,56 +33,44 @@ export class PackageManager extends EventEmitter {
         this.storage = storage;
         this.packages = {};
         this.version = version;
-        this.pckdir_watch = chokidar.watch(storage);
         this.ready = false;
 
-        this.pckdir_watch.on('addDir', async (pathDir) => {
-            let parsed = path.parse(pathDir);
-            if (parsed.dir === this.storage) {
-                logger.logInfo('Package added ' + parsed.name);
-                let http_p = await getport({
-                    port: getport.makeRange(52521, 52570),
-                });
-                let http_pp = await getport({
-                    port: getport.makeRange(52571, 52620),
-                });
-                this.packages[parsed.name] = new Package(
-                    `${this.storage}/${parsed.name}`,
-                    http_p,
-                    http_pp
-                );
-            }
+        this.pckdir_watch = chokidar.watch(storage, { depth: 0 });
+        this.pckdir_watch.on('addDir', async (path_dir) => {
+            let parsed = path.parse(path_dir);
+            logger.logInfo('Package added ' + parsed.name);
+            let http_port = await getport({
+                port: getport.makeRange(52521, 52570),
+            });
+            let http_port_public = await getport({
+                port: getport.makeRange(52571, 52620),
+            });
+            this.packages[parsed.name] = new Package(
+                `${this.storage}/${parsed.name}`,
+                http_port,
+                http_port_public
+            );
         });
-        this.pckdir_watch.on('unlinkDir', (pathDir) => {
-            let parsed = path.parse(pathDir);
-            if (parsed.dir === this.storage) {
-                delete this.packages[parsed.name];
-            }
+        this.pckdir_watch.on('unlinkDir', (path_dir) => {
+            let parsed = path.parse(path_dir);
+            delete this.packages[parsed.name];
         });
-
-        this.pckdir_watch.on('change', (file_path) => {
-            let parsed = path.parse(file_path);
-            let path_members = parsed.dir.split('/');
-            let n = path_members.length;
-            let pckg_name = path_members[n - 2];
-
-            if (
-                parsed.name === 'settings' &&
-                pckg_name in this.packages &&
-                path_members[n - 1] === 'localdata' &&
-                path_members.slice(0, n - 2).join('/') === this.storage
-            ) {
-                this.packages[pckg_name].restart('SIGINT');
-            }
-        });
-
         this.pckdir_watch.on('ready', () => {
-            let packages = this.list();
             for (let name in this.packages) {
                 logger.logInfo('Package ready ' + name);
             }
             this.ready = true;
             this.emit('ready');
+        });
+
+        const settingsGlob = `${storage}/**/localdata/settings.json`;
+        this.settings_watch = chokidar.watch(settingsGlob, { depth: 2 });
+        this.settings_watch.on('change', (file_path) => {
+            let path_members = file_path.split('/');
+            let pckg_name = path_members[path_members.length - 3];
+            if (pckg_name in this.packages) {
+                this.packages[pckg_name].restart('SIGINT');
+            }
         });
     }
 
@@ -182,15 +171,6 @@ export class PackageManager extends EventEmitter {
         this.directive_params.refresh();
     }
 
-    list(): string[] {
-        let packages = [];
-        let filenames = fs.readdirSync(this.storage);
-        filenames.forEach((file) => {
-            packages.push(file);
-        });
-        return packages;
-    }
-
     listManifests(): Manifest[] {
         let list = [];
         for (let p in this.packages) {
@@ -206,17 +186,13 @@ export class Package {
     enabled: boolean;
     process: CamScripterMonitor;
     env_vars: Enviroment;
-    constructor(
-        storage: string,
-        default_http_sockt: number,
-        default_http_public: number
-    ) {
+    constructor(storage: string, http_port: number, http_port_public: number) {
         this.storage = storage;
         this.manifest = this.readManifest();
         this.enabled = false;
         this.env_vars = {
-            http_socket: default_http_sockt,
-            http_socket_public: default_http_public,
+            http_port,
+            http_port_public,
             install_path: this.storage,
             persistent_data_path: this.storage + '/localdata/',
         };
