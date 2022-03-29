@@ -35,7 +35,7 @@ export class PackageManager extends EventEmitter {
         this.version = version;
         this.ready = false;
 
-        this.pckdir_watch = chokidar.watch(storage, { depth: 0 });
+        this.pckdir_watch = chokidar.watch(`${storage}/*`, { depth: 0 });
         this.pckdir_watch.on('addDir', async (path_dir) => {
             let parsed = path.parse(path_dir);
             logger.logInfo('Package added ' + parsed.name);
