@@ -315,31 +315,41 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
                 if (name.ext === '.zip') {
                     logger.logInfo('HTTPApi: localdata imported under name ' + name.base);
                     let zip = new AdmZip(fpath);
-                    zip.extractAllTo(process.cwd() + '/tmp_data/' + name.name);
+                    zip.extractAllTo(process.cwd() + '/tmp/' + name.name);
                     try {
                         let pckg = pckg_manager.packages[pckg_name];
                         let localdata_path = pckg.env_vars.persistent_data_path;
                         fs.removeSync(localdata_path);
-                        fs.copySync(process.cwd() + '/tmp_data/' + name.name, localdata_path);
+                        fs.copySync(process.cwd() + '/tmp/' + name.name, localdata_path);
                     } catch (err) {
                         return_code = ResponseCode.INTERNAL_ERROR;
-                        return_message = err;
+                        return_message = err.toString();
                     } finally {
-                        fs.removeSync(process.cwd() + '/tmp_data/' + name.name);
+                        fs.removeSync(process.cwd() + '/tmp/' + name.name);
                     }
                 } else {
                     logger.logError('HTTPApi: wrong extention recieved ');
+                    sendMessageResponse(res, ResponseCode.BAD_REQ, "Wrong Format");
                 }
                 fs.removeSync(fpath);
             }
             sendMessageResponse(res, return_code, return_message);
             break;
         case "EXPORT":
-            let archie = archiver('zip', { zlib: { level: compression_level } })
+            let archie = archiver('zip', { zlib: { level: compression_level || 9 } })
             let pckg = pckg_manager.packages[pckg_name];
             let localdata_path = pckg.env_vars.persistent_data_path;
+            let temp = process.cwd() + '/tmp/' + pckg_name + "_localdata.zip"
+            let output = fs.createWriteStream(temp);
+            output.on('close', function() {
+                logger.logDebug(archie.pointer() + ' total bytes');
+                logger.logDebug('archiver has been finalized and the output file descriptor has closed.');
+                sendArchiverResponse(res, ResponseCode.OK, temp);
+                fs.removeSync(temp);
+            });
+            archie.pipe(output);
             archie.directory(localdata_path, false);
-            await sendArchiverResponse(res, ResponseCode.OK, archie);
+            await archie.finalize();
             break;
         default:
             sendMessageResponse(res, ResponseCode.BAD_REQ, "Invalid action")
