@@ -34,6 +34,7 @@ const ext_map = {
     '.svg': 'image/svg+xml',
     '.pdf': 'application/pdf',
     '.doc': 'application/msword',
+    '.ttf': 'font/sfnt',
 };
 
 const pckg_manager = new PackageManager(
