@@ -97,10 +97,7 @@ export class CamScripterMonitor extends EventEmitter {
         });
         this.process_log.on('line', (line) => {
             let date = new Date();
-            fs.appendFileSync(
-                this.log_path,
-                date.toISOString() + ': ' + line + '\n'
-            );
+            fs.appendFileSync(this.log_path, date.toISOString() + ': ' + line + '\n');
         });
 
         this.process_control = cp.fork(this.path, {

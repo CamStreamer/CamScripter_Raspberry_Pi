@@ -45,11 +45,7 @@ export class PackageManager extends EventEmitter {
             let http_port_public = await getport({
                 port: getport.makeRange(52571, 52620),
             });
-            this.packages[parsed.name] = new Package(
-                `${this.storage}/${parsed.name}`,
-                http_port,
-                http_port_public
-            );
+            this.packages[parsed.name] = new Package(`${this.storage}/${parsed.name}`, http_port, http_port_public);
         });
         this.pckdir_watch.on('unlinkDir', (path_dir) => {
             let parsed = path.parse(path_dir);
@@ -79,22 +75,14 @@ export class PackageManager extends EventEmitter {
             let raw_manifest = fse.readFileSync(tmp_file + '/manifest.json');
             let manifest = JSON.parse(raw_manifest.toString());
             if ('required_camscripter_rbi_version' in manifest) {
-                let version =
-                    manifest['required_camscripter_rbi_version'].split('.');
+                let version = manifest['required_camscripter_rbi_version'].split('.');
 
-                if (version.length != this.version.length)
-                    throw 'Wrong manifest format';
+                if (version.length != this.version.length) throw 'Wrong manifest format';
 
                 for (let i = 0; i < this.version.length; i++) {
-                    if (
-                        Number.parseInt(version[i]) >
-                        Number.parseInt(this.version[i])
-                    ) {
+                    if (Number.parseInt(version[i]) > Number.parseInt(this.version[i])) {
                         throw 'Newer CSc-RBi version required';
-                    } else if (
-                        Number.parseInt(version[i]) <
-                        Number.parseInt(this.version[i])
-                    ) {
+                    } else if (Number.parseInt(version[i]) < Number.parseInt(this.version[i])) {
                         break;
                     }
                 }
@@ -108,10 +96,7 @@ export class PackageManager extends EventEmitter {
             logger.logInfo('Package Manager: Installing package ' + name);
             let copy_filter = (src, dest) => {
                 let parsed = path.parse(dest);
-                if (
-                    parsed.dir === this.storage + `/${name}/localdata` &&
-                    fs.existsSync(dest)
-                ) {
+                if (parsed.dir === this.storage + `/${name}/localdata` && fs.existsSync(dest)) {
                     return false;
                 }
                 return true;

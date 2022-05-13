@@ -58,7 +58,7 @@
         "ws": "^8.0.0"
     },
     "devDependencies": {
-        "@camstreamer/prettier-config": "^2.0.3",
+        "@camstreamer/prettier-config": "^2.0.4",
         "@types/adm-zip": "^0.4.34",
         "@types/archiver": "^5.3.1",
         "@types/chokidar": "^2.1.3",

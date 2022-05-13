@@ -20,10 +20,7 @@ export class ParamManager extends EventEmitter {
         this.watch_dog.on('add', (pathFile) => {
             let parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
-                this.params[parsed.name] = new ParamGroup(
-                    parsed.name,
-                    pathFile
-                );
+                this.params[parsed.name] = new ParamGroup(parsed.name, pathFile);
             }
             this.emit('new', parsed.name);
         });
@@ -43,10 +40,7 @@ export class ParamManager extends EventEmitter {
                 let parsed = path.parse(file);
                 if (parsed.ext === '.json') {
                     logger.logDebug('Param loaded: ' + parsed.name);
-                    this.params[parsed.name] = new ParamGroup(
-                        parsed.name,
-                        this.storage + file
-                    );
+                    this.params[parsed.name] = new ParamGroup(parsed.name, this.storage + file);
                 }
             });
             this.ready = true;
@@ -91,12 +85,7 @@ export class ParamGroup extends EventEmitter {
     refresh(): void {
         let raw_json = fs.readFileSync(this.file_name);
         this.value = JSON.parse(raw_json.toString());
-        logger.logDebug(
-            'Parameter ' +
-                this.name +
-                ' new value: ' +
-                JSON.stringify(this.value)
-        );
+        logger.logDebug('Parameter ' + this.name + ' new value: ' + JSON.stringify(this.value));
         this.emit('refresh');
     }
 }

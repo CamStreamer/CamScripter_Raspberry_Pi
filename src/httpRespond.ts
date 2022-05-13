@@ -1,6 +1,7 @@
-import { ServerResponse } from 'http';
-import { logger } from './logger';
 import { Archiver } from 'archiver';
+import { ServerResponse } from 'http';
+
+import { logger } from './logger';
 
 export enum ResponseCode {
     OK = 200,
@@ -9,11 +10,7 @@ export enum ResponseCode {
     INTERNAL_ERROR = 500,
 }
 
-export function sendMessageResponse(
-    res: ServerResponse,
-    code: ResponseCode,
-    message: string
-) {
+export function sendMessageResponse(res: ServerResponse, code: ResponseCode, message: string) {
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (code == ResponseCode.INTERNAL_ERROR) {
@@ -25,11 +22,7 @@ export function sendMessageResponse(
     res.end(message);
 }
 
-export function sendJsonResponse(
-    res: ServerResponse,
-    code: ResponseCode,
-    json_obj: object
-) {
+export function sendJsonResponse(res: ServerResponse, code: ResponseCode, json_obj: object) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     let message = JSON.stringify(json_obj);
@@ -42,12 +35,7 @@ export function sendJsonResponse(
     res.end(message);
 }
 
-export function sendParamResponse(
-    res: ServerResponse,
-    code: ResponseCode,
-    param_name: string,
-    json_obj: object
-) {
+export function sendParamResponse(res: ServerResponse, code: ResponseCode, param_name: string, json_obj: object) {
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Access-Control-Allow-Origin', '*');
     let data = param_name + '=' + JSON.stringify(json_obj);
@@ -55,11 +43,7 @@ export function sendParamResponse(
     res.end(data);
 }
 
-export async function sendArchiverResponse(
-    res: ServerResponse,
-    code: ResponseCode,
-    archive: Archiver
-) {
+export async function sendArchiverResponse(res: ServerResponse, code: ResponseCode, archive: Archiver) {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Length', archive.pointer());
     res.statusCode = code;
