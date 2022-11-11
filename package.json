@@ -42,9 +42,8 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "adm-zip": "^0.5.5",
         "archiver": "^5.3.0",
-        "chokidar": "^3.5.2",
+        "chokidar": "^3.5.3",
         "formidable": "^1.2.2",
         "fs": "0.0.1-security",
         "fs-extra": "^10.0.0",
@@ -55,7 +54,8 @@
         "n-readlines": "^1.0.1",
         "shelljs": "^0.8.4",
         "url": "^0.11.0",
-        "ws": "^8.0.0"
+        "ws": "^8.0.0",
+        "yauzl": "^2.10.0"
     },
     "devDependencies": {
         "@camstreamer/prettier-config": "^2.0.4",

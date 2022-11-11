@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { WriteStream } from 'fs';
 import * as fs from 'fs-extra';
 import * as readline from 'readline';
-import { Duplex, Readable, Stream } from 'stream';
+import { Duplex, Stream } from 'stream';
 
 import { Enviroment } from './commonData';
 import { logger } from './logger';
@@ -28,7 +28,7 @@ export class CamScripterMonitor extends EventEmitter {
     process_stream: Duplex;
     process_log: readline.ReadLine;
     file_stream: WriteStream;
-    timeout: NodeJS.Timeout;
+    restartTimeout: NodeJS.Timeout;
     constructor(path: string, options: MonitorOptions) {
         super();
         this.enable = false;
@@ -53,14 +53,14 @@ export class CamScripterMonitor extends EventEmitter {
         if (this.process_control && this.process_control.exitCode === null) {
             this.process_control.removeAllListeners();
             this.process_control.kill('SIGTERM');
-            clearTimeout(this.timeout);
+            clearTimeout(this.restartTimeout);
             this.enable = false;
-            let current_process = this.process_control;
-            let murder_timeout = setTimeout(() => {
+            const current_process = this.process_control;
+            setTimeout(() => {
                 this.brutalize(current_process);
             }, 1500);
         } else if (this.process_control && this.enable) {
-            clearTimeout(this.timeout);
+            clearTimeout(this.restartTimeout);
             this.enable = false;
         } else {
             throw 'This process has been set to stop';
@@ -85,7 +85,7 @@ export class CamScripterMonitor extends EventEmitter {
         } else if (!this.enable) {
             return;
         }
-        clearTimeout(this.timeout);
+        clearTimeout(this.restartTimeout);
         this.emit('killed');
     }
 
@@ -118,7 +118,7 @@ export class CamScripterMonitor extends EventEmitter {
 
         this.process_control.on('close', (code, signal) => {
             this.process_control.removeAllListeners();
-            this.timeout = setTimeout(() => {
+            this.restartTimeout = setTimeout(() => {
                 if (this.enable) {
                     this._newChildProcess();
                     this.emit('restart');
