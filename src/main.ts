@@ -202,7 +202,7 @@ http_server.registerDataCGI('/package/install.cgi', async (url, res, files: File
             try {
                 logger.logInfo('HTTPApi: Install request ' + name.base);
                 const tmpPckgDir = process.cwd() + '/tmp_pckgs/' + name.name;
-                await fs.rmdir(tmpPckgDir, { recursive: true });
+                await fs.remove(tmpPckgDir);
                 await extractArchive(fpath, tmpPckgDir);
                 await pckg_manager.installPackage(process.cwd() + '/tmp_pckgs/' + name.name);
             } catch (err) {
@@ -264,7 +264,7 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
                     try {
                         logger.logInfo('HTTPApi: localdata imported under name ' + name.base);
                         const tmpPckgDir = process.cwd() + '/tmp_data/' + name.name;
-                        await fs.rmdir(tmpPckgDir, { recursive: true });
+                        await fs.remove(tmpPckgDir);
                         await extractArchive(fpath, tmpPckgDir);
                         let pckg = pckg_manager.packages[pckg_name];
                         let localdata_path = pckg.env_vars.persistent_data_path;
