@@ -5,8 +5,6 @@ var defaultPage = 'settings.html';
 
 var firstStart = 1;
 
-
-
 $(document).ready(function () {
   get_version();
   renderPackages();
@@ -31,8 +29,6 @@ $(document).ready(function () {
     }
   });
 });
-
-
 
 // function - alert
 function make_alert(id, msg, type, alert_dismissible, close_button) {
@@ -161,7 +157,6 @@ function upload_package_action() {
       contentType: false,
       processData: false,
       complete: function () {
-        stopRunningPackage(name[0]);
         getPackageList(); //render packages again
       },
       success: function (response) {
@@ -179,18 +174,12 @@ function upload_package_action() {
 
 // List of all packages
 function renderPackages() {
-
-
     getSystemLog()
-    var currentVersionParam = '1.0.0';
-    var currentVersion = currentVersionParam.split('.');
-
     if (firstStart == 0) {
       getPackageList();
     } else {
       $('#content').html(loadingPageRender());
       getPackageList();
-
     }
 }
 
@@ -255,7 +244,7 @@ function getPackageList() {
         } else {
           dataJson = {};
         }
-        listOfCamerasRender(response, dataJson);
+        listOfPackagesRender(response, dataJson);
         let selected = $('#system_log_select').val();
         $('#system_log_select').html(listOfSyslogOptions(response, selected));
       });
@@ -309,7 +298,7 @@ function emptyPageRender() {
 }
 
 
-function listOfCamerasRender(response, dataJson) {
+function listOfPackagesRender(response, dataJson) {
   var output = "";
   //make array of running packages
   if (response.length == 0) {
@@ -436,7 +425,7 @@ function setRunningPackage(package_name) {
       dataJson = JSON.parse(data);
     }
     if (dataJson[package_name] == undefined) {
-      //if package is not included
+      // if package is not included
       dataJson[package_name] = { "enabled": true };
     }
 

@@ -1,11 +1,10 @@
-import * as AdmZip from 'adm-zip';
 import * as archiver from 'archiver';
 import { Fields, Files } from 'formidable';
 import * as fs from 'fs-extra';
 import { IncomingMessage, ServerResponse } from 'http';
 import * as http_proxy from 'http-proxy';
-import { arch } from 'os';
 import * as path from 'path';
+import * as yauzl from 'yauzl';
 
 import { getVersion, Paths } from './commonData';
 import {
@@ -174,7 +173,11 @@ http_server.registerRequestCGI('/systemlog.cgi', (url, res) => {
                 });
                 read[1].pipe(res);
             } else {
-                sendMessageResponse(res, ResponseCode.NOT_FOUND, 'Vapix-Sim: No log file found');
+                res.writeHead(ResponseCode.OK, {
+                    'Content-Type': 'text/plain',
+                    'Content-Length': 0,
+                });
+                res.end();
             }
         } else {
             sendMessageResponse(res, ResponseCode.BAD_REQ, 'Vapix-Sim: Uknown package');
@@ -189,34 +192,61 @@ http_server.registerRequestCGI('/version.cgi', (url, res) => {
 });
 
 //CAMSCRIPTER
-http_server.registerDataCGI('/package/install.cgi', (url, res, files: Files, fields: Fields) => {
+http_server.registerDataCGI('/package/install.cgi', async (url, res, files: Files, fields: Fields) => {
     let return_code = ResponseCode.OK;
     let return_message = 'OK';
     for (let i in files) {
-        let name = path.parse(files[i]['name']);
-        let fpath = files[i]['path'];
+        const name = path.parse(files[i]['name']);
+        const fpath = files[i]['path'];
         if (name.ext === '.zip') {
-            logger.logInfo('HTTPApi: Install request ' + name.base);
-            let zip = new AdmZip(fpath);
-            zip.extractAllTo(process.cwd() + '/tmp_pckgs/' + name.name);
             try {
-                pckg_manager.installPackage(process.cwd() + '/tmp_pckgs/' + name.name);
+                logger.logInfo('HTTPApi: Install request ' + name.base);
+                const tmpPckgDir = process.cwd() + '/tmp_pckgs/' + name.name;
+                await fs.rmdir(tmpPckgDir, { recursive: true });
+                await extractArchive(fpath, tmpPckgDir);
+                await pckg_manager.installPackage(process.cwd() + '/tmp_pckgs/' + name.name);
             } catch (err) {
+                console.log(err);
                 return_code = ResponseCode.INTERNAL_ERROR;
-                return_message = err;
+                return_message = err.message;
             } finally {
-                fs.removeSync(process.cwd() + '/tmp_pckgs/' + name.name);
+                await fs.remove(process.cwd() + '/tmp_pckgs/' + name.name);
+                await fs.remove(fpath);
             }
         } else {
             logger.logError('HTTPApi: wrong extention recieved ');
+            await fs.remove(fpath);
         }
-        fs.removeSync(fpath);
     }
     sendMessageResponse(res, return_code, return_message);
 });
 
+http_server.registerRequestCGI('/package/remove.cgi', (url, res) => {
+    try {
+        let pckg_name = url.searchParams.get('package_name');
+        if (!pckg_name) {
+            sendJsonResponse(res, ResponseCode.BAD_REQ, {
+                message: 'No name provided!',
+            });
+        } else if (pckg_manager.contains(pckg_name)) {
+            pckg_manager.uninstallPackage(pckg_name);
+            sendJsonResponse(res, ResponseCode.OK, {});
+        } else {
+            sendJsonResponse(res, ResponseCode.NOT_FOUND, { message: 'Not Found' });
+        }
+    } catch (err) {
+        console.log(err);
+        sendJsonResponse(res, ResponseCode.NOT_FOUND, { message: `Package uninstall error: ${err.message}` });
+    }
+});
+
 http_server.registerRequestCGI('/package/list.cgi', (url, res) => {
-    sendJsonResponse(res, ResponseCode.OK, pckg_manager.listManifests());
+    try {
+        sendJsonResponse(res, ResponseCode.OK, pckg_manager.listManifests());
+    } catch (err) {
+        console.log(err);
+        sendJsonResponse(res, ResponseCode.NOT_FOUND, { message: `Package list error: ${err.message}` });
+    }
 });
 
 http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files, fields: Fields) => {
@@ -231,10 +261,11 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
                 let name = path.parse(files[i]['name']);
                 let fpath = files[i]['path'];
                 if (name.ext === '.zip') {
-                    logger.logInfo('HTTPApi: localdata imported under name ' + name.base);
-                    let zip = new AdmZip(fpath);
-                    zip.extractAllTo(process.cwd() + '/tmp_data/' + name.name);
                     try {
+                        logger.logInfo('HTTPApi: localdata imported under name ' + name.base);
+                        const tmpPckgDir = process.cwd() + '/tmp_data/' + name.name;
+                        await fs.rmdir(tmpPckgDir, { recursive: true });
+                        await extractArchive(fpath, tmpPckgDir);
                         let pckg = pckg_manager.packages[pckg_name];
                         let localdata_path = pckg.env_vars.persistent_data_path;
                         fs.removeSync(localdata_path);
@@ -263,20 +294,6 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
             break;
         default:
             sendMessageResponse(res, ResponseCode.BAD_REQ, 'Invalid action');
-    }
-});
-
-http_server.registerRequestCGI('/package/remove.cgi', (url, res) => {
-    let pckg_name = url.searchParams.get('package_name');
-    if (!pckg_name) {
-        sendJsonResponse(res, ResponseCode.BAD_REQ, {
-            message: 'No name provided!',
-        });
-    } else if (pckg_manager.contains(pckg_name)) {
-        pckg_manager.uninstallPackage(pckg_name);
-        sendJsonResponse(res, ResponseCode.OK, {});
-    } else {
-        sendJsonResponse(res, ResponseCode.NOT_FOUND, { message: 'Not Found' });
     }
 });
 
@@ -316,6 +333,55 @@ http_server.registerDataCGI('/package/settings.cgi', (url, res, files, fields) =
         }
     }
 });
+
+function extractArchive(archive: string, dirName: string) {
+    return new Promise<void>((resolve) => {
+        yauzl.open(archive, { lazyEntries: true }, (error, zip) => {
+            zip.on('end', () => {
+                resolve();
+            });
+            zip.on('entry', (entry) => {
+                zip.openReadStream(entry, (error, readStream) => {
+                    if (error) {
+                        return zip.emit('error', error);
+                    }
+
+                    // Save current entry. Then read next.
+                    const filePath = path.join(dirName, entry.fileName);
+                    if (filePath.lastIndexOf('/') === filePath.length - 1) {
+                        fs.mkdirSync(filePath, { recursive: true });
+                        zip.readEntry();
+                        return;
+                    }
+
+                    const parsedPath = path.parse(filePath);
+                    fs.mkdir(parsedPath.dir, { recursive: true }, (error) => {
+                        if (error) {
+                            return zip.emit('error', error);
+                        }
+
+                        const mode = entry.externalFileAttributes >>> 16;
+                        const options = mode !== 0 ? { mode } : {}; // Preserve file attributes on Unix systems
+                        const outputStream = fs.createWriteStream(filePath, options);
+                        outputStream.on('error', (error) => {
+                            zip.emit('error', error);
+                        });
+                        outputStream.on('finish', () => {
+                            zip.readEntry();
+                        });
+
+                        readStream.on('error', (error) => {
+                            zip.emit('error', error);
+                        });
+                        readStream.pipe(outputStream);
+                    });
+                });
+            });
+
+            zip.readEntry();
+        });
+    });
+}
 
 process.on('unhandledRejection - ', (err: Error) => {
     logger.logError('unhandledRejection' + err.message);

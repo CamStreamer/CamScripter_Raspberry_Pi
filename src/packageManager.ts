@@ -1,8 +1,7 @@
 import * as cp from 'child_process';
 import * as chokidar from 'chokidar';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
+import * as fs from 'fs-extra';
 import * as getport from 'get-port';
 import * as path from 'path';
 
@@ -19,8 +18,10 @@ type Manifest = {
 
 export class PackageManager extends EventEmitter {
     storage: string;
-    packages: { [key: string]: Package };
+    packages: Record<string, Package>;
+    packagesRegisterPrms: Record<string, Promise<void>>;
     pckdir_watch: chokidar.FSWatcher;
+    pckdir_watch_pause: boolean;
     settings_watch: chokidar.FSWatcher;
     directive_params: ParamGroup;
     version: string[];
@@ -32,31 +33,43 @@ export class PackageManager extends EventEmitter {
         this.lock_mode = false;
         this.storage = storage;
         this.packages = {};
+        this.packagesRegisterPrms = {};
+        this.pckdir_watch_pause = false;
         this.version = version;
         this.ready = false;
 
-        this.pckdir_watch = chokidar.watch(`${storage}/*`, { depth: 0 });
-        this.pckdir_watch.on('addDir', async (path_dir) => {
-            let parsed = path.parse(path_dir);
-            logger.logInfo('Package added ' + parsed.name);
-            let http_port = await getport({
-                port: getport.makeRange(52521, 52570),
-            });
-            let http_port_public = await getport({
-                port: getport.makeRange(52571, 52620),
-            });
-            this.packages[parsed.name] = new Package(`${this.storage}/${parsed.name}`, http_port, http_port_public);
+        this.pckdir_watch = chokidar.watch(`${storage}`, { depth: 0 });
+        this.pckdir_watch.on('addDir', (path_dir) => {
+            if (this.pckdir_watch_pause) {
+                return;
+            }
+            const parsed = path.parse(path_dir);
+            if (parsed.name !== 'packages') {
+                this.packagesRegisterPrms[parsed.name] = this.registerPackage(parsed.name);
+            }
         });
         this.pckdir_watch.on('unlinkDir', (path_dir) => {
-            let parsed = path.parse(path_dir);
-            delete this.packages[parsed.name];
-        });
-        this.pckdir_watch.on('ready', () => {
-            for (let name in this.packages) {
-                logger.logInfo('Package ready ' + name);
+            if (this.pckdir_watch_pause) {
+                return;
             }
-            this.ready = true;
-            this.emit('ready');
+            const parsed = path.parse(path_dir);
+            this.unregisterPackage(parsed.name);
+        });
+        this.pckdir_watch.on('ready', async () => {
+            try {
+                await Promise.all(Object.values(this.packagesRegisterPrms));
+                for (let name in this.packages) {
+                    logger.logInfo('Package ready ' + name);
+                }
+            } catch (err) {
+                logger.logError(`Package initialization error: ${err.message}`);
+            } finally {
+                this.ready = true;
+                this.emit('ready');
+            }
+        });
+        this.pckdir_watch.on('error', (err) => {
+            logger.logError(`Package watcher error: ${err.message}`);
         });
 
         const settingsGlob = `${storage}/**/localdata/settings.json`;
@@ -64,57 +77,91 @@ export class PackageManager extends EventEmitter {
         this.settings_watch.on('change', (file_path) => {
             let path_members = file_path.split('/');
             let pckg_name = path_members[path_members.length - 3];
-            if (pckg_name in this.packages) {
+            if (this.contains(pckg_name)) {
                 this.packages[pckg_name].restart('SIGINT');
             }
         });
     }
 
-    installPackage(tmp_file: string) {
-        if (fse.existsSync(tmp_file + '/manifest.json')) {
-            let raw_manifest = fse.readFileSync(tmp_file + '/manifest.json');
-            let manifest = JSON.parse(raw_manifest.toString());
+    async registerPackage(package_name: string) {
+        if (this.contains(package_name)) {
+            return;
+        }
+
+        logger.logInfo(`Package added ${package_name}`);
+        const http_port = await getport({
+            port: getport.makeRange(52521, 52570),
+        });
+        const http_port_public = await getport({
+            port: getport.makeRange(52571, 52620),
+        });
+        this.packages[package_name] = new Package(`${this.storage}/${package_name}`, http_port, http_port_public);
+    }
+
+    unregisterPackage(package_name: string) {
+        if (!this.contains(package_name)) {
+            return;
+        }
+
+        logger.logInfo(`Package removed ${package_name}`);
+        this.packages[package_name].stop();
+        delete this.packages[package_name];
+    }
+
+    async installPackage(tmp_package_path: string) {
+        if (fs.existsSync(tmp_package_path + '/manifest.json')) {
+            const raw_manifest = await fs.readFile(tmp_package_path + '/manifest.json');
+            const manifest = JSON.parse(raw_manifest.toString());
             if ('required_camscripter_rbi_version' in manifest) {
                 let version = manifest['required_camscripter_rbi_version'].split('.');
 
-                if (version.length != this.version.length) throw 'Wrong manifest format';
+                if (version.length != this.version.length) {
+                    throw new Error('Wrong manifest format');
+                }
 
                 for (let i = 0; i < this.version.length; i++) {
                     if (Number.parseInt(version[i]) > Number.parseInt(this.version[i])) {
-                        throw 'Newer CSc-RBi version required';
+                        throw new Error('Newer CSc-RBi version required');
                     } else if (Number.parseInt(version[i]) < Number.parseInt(this.version[i])) {
                         break;
                     }
                 }
             }
-            logger.logInfo('npm install run');
-            cp.execSync('sudo npm install', {
-                cwd: tmp_file,
-            });
-            this.lock();
-            let name = manifest['package_name'];
-            logger.logInfo('Package Manager: Installing package ' + name);
-            let copy_filter = (src, dest) => {
-                let parsed = path.parse(dest);
-                if (parsed.dir === this.storage + `/${name}/localdata` && fs.existsSync(dest)) {
-                    return false;
-                }
-                return true;
-            };
 
-            if (name in this.packages) {
-                if (this.packages[name].enabled) this.packages[name].stop();
-                fse.copySync(tmp_file, `${this.storage}/${name}`, {
-                    filter: copy_filter,
+            try {
+                this.lock();
+                this.pckdir_watch_pause = true;
+                const name = manifest['package_name'];
+                logger.logInfo('Package Manager: Installing package ' + name);
+
+                logger.logInfo('npm install run');
+                cp.execSync('sudo npm install', {
+                    cwd: tmp_package_path,
                 });
-            } else {
-                fse.copySync(tmp_file, `${this.storage}/${name}`);
+
+                if (this.contains(name)) {
+                    const pckgWasEnabled = this.packages[name].enabled;
+                    this.unregisterPackage(name);
+                    await fs.copy(`${this.storage}/${name}/localdata`, `${tmp_package_path}/localdata`);
+                    await fs.move(`${tmp_package_path}`, `${this.storage}/${name}`, { overwrite: true });
+                    await this.registerPackage(name);
+                    if (pckgWasEnabled) {
+                        this.packages[name].start();
+                    }
+                } else {
+                    await fs.move(`${tmp_package_path}`, `${this.storage}/${name}`, { overwrite: true });
+                    await this.registerPackage(name);
+                }
+            } catch (err) {
+                throw err;
+            } finally {
+                this.pckdir_watch_pause = true;
+                this.unlock();
             }
-            this.unlock();
             return true;
         } else {
             logger.logError('Package Manager: Error no manifest found');
-            throw 'No manifest found';
+            throw new Error('No manifest found');
         }
     }
 
@@ -130,8 +177,8 @@ export class PackageManager extends EventEmitter {
 
     uninstallPackage(name: string) {
         let storage = `${this.storage}/${name}`;
-        fse.removeSync(storage);
-        delete this.packages[name];
+        fs.removeSync(storage);
+        this.unregisterPackage(name);
     }
 
     contains(name: string) {
@@ -181,8 +228,8 @@ export class Package {
             install_path: this.storage,
             persistent_data_path: this.storage + '/localdata/',
         };
-        if (!fse.pathExistsSync(`${this.storage}/localdata`)) {
-            fse.mkdirSync(`${this.storage}/localdata`);
+        if (!fs.pathExistsSync(`${this.storage}/localdata`)) {
+            fs.mkdirSync(`${this.storage}/localdata`);
         }
         this.process = new CamScripterMonitor(this.storage + '/main.js', {
             cwd: this.storage,
@@ -208,21 +255,21 @@ export class Package {
         return manifest;
     }
 
-    accessOnlineFile(raw_path: string): [fs.Stats, fse.ReadStream] {
+    accessOnlineFile(raw_path: string): [fs.Stats, fs.ReadStream] {
         let file_path = this.storage + '/html/' + path.normalize(raw_path);
-        if (fse.pathExistsSync(file_path)) {
-            let stat = fse.statSync(file_path);
-            return [stat, fse.createReadStream(file_path)];
+        if (fs.pathExistsSync(file_path)) {
+            let stat = fs.statSync(file_path);
+            return [stat, fs.createReadStream(file_path)];
         } else {
             return null;
         }
     }
 
-    accessLogFile(): [fs.Stats, fse.ReadStream] {
+    accessLogFile(): [fs.Stats, fs.ReadStream] {
         let file_path = this.storage + '/localdata/log.txt';
-        if (fse.pathExistsSync(file_path)) {
-            let stat = fse.statSync(file_path);
-            return [stat, fse.createReadStream(file_path)];
+        if (fs.pathExistsSync(file_path)) {
+            let stat = fs.statSync(file_path);
+            return [stat, fs.createReadStream(file_path)];
         } else {
             return null;
         }
@@ -230,9 +277,9 @@ export class Package {
 
     getSettings(): object {
         let set_path = this.env_vars.persistent_data_path + 'settings.json';
-        if (fse.pathExistsSync(set_path)) {
+        if (fs.pathExistsSync(set_path)) {
             try {
-                let json = fse.readJSONSync(set_path);
+                let json = fs.readJSONSync(set_path);
                 return json;
             } catch (err) {
                 logger.logError(err);
@@ -245,13 +292,14 @@ export class Package {
 
     setSettings(json_obj: object): void {
         let set_path = this.env_vars.persistent_data_path + 'settings.json';
-        fse.writeJsonSync(set_path, json_obj);
+        fs.writeJsonSync(set_path, json_obj);
     }
 
     start(): void {
-        let was_enabled = this.enabled;
-        this.enabled = true;
-        if (!was_enabled) this.process.start();
+        if (!this.enabled) {
+            this.enabled = true;
+            this.process.start();
+        }
     }
 
     restart(signal?: NodeJS.Signals): void {
@@ -262,8 +310,9 @@ export class Package {
     }
 
     stop(): void {
-        let was_enabled = this.enabled;
-        this.enabled = false;
-        if (was_enabled) this.process.stop();
+        if (this.enabled) {
+            this.enabled = false;
+            this.process.stop();
+        }
     }
 }
