@@ -11,11 +11,16 @@ Type in `ssh pi@Your_IP_Address`.
 
 ## Installation
 
+Node.js and NPM package manager is required and can be installed by following command: 
+```
+sudo apt install nodejs
+```
+
 To install CamScripter on your device run the following command:
 ```
 sudo npm install -g camscripter-raspberry
 ```
-Thus camscripter interface will become available in you command line.
+Thus camscripter interface will become available in your command line.
 CamScripter will be automaticaly registered as systemd service, which will start with your computer.
 If you want to access CamScripter only on temporal basis, you can run `sudo camscripter-unregister` from the root directory.
 
