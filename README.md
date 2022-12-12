@@ -13,7 +13,7 @@ Type in `ssh pi@Your_IP_Address`.
 
 Node.js and NPM package manager is required and can be installed by following command: 
 ```
-sudo apt install nodejs
+sudo apt install nodejs npm
 ```
 
 To install CamScripter on your device run the following command:
