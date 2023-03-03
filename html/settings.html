@@ -79,7 +79,11 @@
     <div id="content">
 
     </div>
-    <small>Read <a href="https://github.com/CamStreamer/CamScripterApp_examples#camscripterapp_examples" target="_blank">here</a> how to create your own micro application for CamScripter App</small>
+    <div class="alert alert-light mt-2">
+      <small><span class="fas fa-info-circle mr-2"></span>Read <a href="https://github.com/CamStreamer/CamScripterApp_examples#camscripterapp_examples" target="_blank">here</a>
+        how to create your own micro application for CamScripter App
+      </small>
+    </div>
   </div>
 </div>
 
@@ -94,7 +98,9 @@
                 <option value="system" selected>System</option>
               </select>
               <a href="#" class="btn btn-sm btn-light" id="system_log_auto_reload_btn"><input type="checkbox" name="auto_reload" id="system_log_auto_reload" checked /> Auto reload</a>
-              <a target="_blank" href="/systemlog.cgi?package_name=system" id="syslog_new_tab" class="float-right btn btn-sm btn-light">Open in new tab</a>
+              <a target="_blank" href="/systemlog.cgi?package_name=system" id="syslog_new_tab" class="float-right btn btn-sm btn-light">
+                Open in new tab<span class="ml-2 fas fa-external-link-alt"></span>
+            </a>
             </div>
             <span class="badge mr-1 float-right" style="padding-bottom: 0;padding-top: 8px;" id="system_log_loading"><span class="h6 fas fa-circle-notch fa-spin text-primary"></span></span></span>
         </div>
@@ -136,7 +142,7 @@
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
-        <h6 class="modal-title text-white" id="exampleModalCenterTitle">Upload micro app</h6>
+        <h6 class="modal-title text-white" id="exampleModalCenterTitle">Upload Package</h6>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -148,12 +154,12 @@
           <label>File</label>
           <input class="form-control" type="file" id="pkg_name" name="pkg_name" data-validation="required extension" data-validation-allowing="zip" />
         </div>
-        <p>Only ZIP file package is allowed.<p>
+        <span class="small text-muted">Only ZIP file package is allowed.</span>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button id="fileUpload" type="submit" class="btn btn-primary">Upload micro app</button>
+        <button type="button" class="btn btn-link" data-dismiss="modal">Close</button>
+        <button id="fileUpload" type="submit" class="btn btn-primary">Upload Package</button>
       </div>
       </form>
     </div>

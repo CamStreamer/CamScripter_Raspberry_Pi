@@ -265,11 +265,11 @@ export class Package {
         }
     }
 
-    accessLogFile(): [fs.Stats, fs.ReadStream] {
+    accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } {
         let file_path = this.storage + '/localdata/log.txt';
         if (fs.pathExistsSync(file_path)) {
             let stat = fs.statSync(file_path);
-            return [stat, fs.createReadStream(file_path)];
+            return { stat, stream: fs.createReadStream(file_path, { end: stat.size }) };
         } else {
             return null;
         }

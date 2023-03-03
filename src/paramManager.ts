@@ -13,10 +13,16 @@ export class ParamManager extends EventEmitter {
     constructor(folder: string) {
         super();
         this.storage = folder;
-        this.watch_dog = chokidar.watch(folder);
         this.ready = false;
         this.params = {};
 
+        this.init();
+    }
+
+    private async init() {
+        await this.createDefaultConfiguration();
+
+        this.watch_dog = chokidar.watch(this.storage);
         this.watch_dog.on('add', (pathFile) => {
             let parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
@@ -45,6 +51,26 @@ export class ParamManager extends EventEmitter {
             });
             this.ready = true;
             this.emit('ready');
+        });
+    }
+
+    private async createDefaultConfiguration() {
+        try {
+            const configExitsts = await this.configurationExist('packageconfigurations');
+            if (!configExitsts) {
+                logger.logDebug("Parameter packageconfigurations doesn't exist, creating default configuration.");
+                fs.writeFileSync(this.storage + 'packageconfigurations.json', '{}');
+            }
+        } catch (err) {
+            logger.logError(err.toString());
+        }
+    }
+
+    private configurationExist(param_name) {
+        return new Promise<boolean>((resolve) => {
+            fs.access(this.storage + param_name + '.json', (err) => {
+                resolve(err === undefined);
+            });
         });
     }
 

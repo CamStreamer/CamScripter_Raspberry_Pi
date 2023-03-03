@@ -149,29 +149,29 @@ http_server.registerDataCGI('/param.cgi', (url, res, files, fields) => {
 });
 
 http_server.registerRequestCGI('/systemlog.cgi', (url, res) => {
-    let pckg_name = url.searchParams.get('package_name');
+    const pckg_name = url.searchParams.get('package_name');
     if (pckg_name) {
         if (pckg_name === 'system') {
-            let file_path = Paths.SYSLOG;
+            const file_path = Paths.SYSLOG;
             if (fs.pathExistsSync(file_path)) {
-                let stat = fs.statSync(file_path);
+                const stat = fs.statSync(file_path);
                 res.writeHead(ResponseCode.OK, {
                     'Content-Type': 'text/plain',
                     'Content-Length': stat.size,
                 });
-                let readStream = fs.createReadStream(file_path);
+                const readStream = fs.createReadStream(file_path, { end: stat.size });
                 readStream.pipe(res);
             } else {
                 sendMessageResponse(res, ResponseCode.NOT_FOUND, 'Vapix-Sim - file not found');
             }
         } else if (pckg_manager.contains(pckg_name)) {
-            let read = pckg_manager.packages[pckg_name].accessLogFile();
-            if (read) {
+            const logFile = pckg_manager.packages[pckg_name].accessLogFile();
+            if (logFile) {
                 res.writeHead(ResponseCode.OK, {
                     'Content-Type': 'text/plain',
-                    'Content-Length': read[0].size,
+                    'Content-Length': logFile.stat.size,
                 });
-                read[1].pipe(res);
+                logFile.stream.pipe(res);
             } else {
                 res.writeHead(ResponseCode.OK, {
                     'Content-Type': 'text/plain',
@@ -383,8 +383,12 @@ function extractArchive(archive: string, dirName: string) {
     });
 }
 
+process.on('uncaughtException', (err) => {
+    logger.logError('uncaughtException: ' + err.stack ?? err.toString());
+});
+
 process.on('unhandledRejection - ', (err: Error) => {
-    logger.logError('unhandledRejection' + err.message);
+    logger.logError('unhandledRejection: ' + err.stack ?? err.toString());
 });
 
 param_manager.on('ready', () => {
