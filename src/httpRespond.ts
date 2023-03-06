@@ -22,10 +22,10 @@ export function sendMessageResponse(res: ServerResponse, code: ResponseCode, mes
     res.end(message);
 }
 
-export function sendJsonResponse(res: ServerResponse, code: ResponseCode, json_obj: object) {
+export function sendJsonResponse(res: ServerResponse, code: ResponseCode, jsonObj: object) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    let message = JSON.stringify(json_obj);
+    let message = JSON.stringify(jsonObj);
     if (code == ResponseCode.INTERNAL_ERROR) {
         logger.logError(message);
     } else if (code != ResponseCode.OK) {
@@ -35,10 +35,10 @@ export function sendJsonResponse(res: ServerResponse, code: ResponseCode, json_o
     res.end(message);
 }
 
-export function sendParamResponse(res: ServerResponse, code: ResponseCode, param_name: string, json_obj: object) {
+export function sendParamResponse(res: ServerResponse, code: ResponseCode, paramName: string, jsonObj: object) {
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    let data = param_name + '=' + JSON.stringify(json_obj);
+    let data = paramName + '=' + JSON.stringify(jsonObj);
     res.statusCode = code;
     res.end(data);
 }

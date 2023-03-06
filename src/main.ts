@@ -19,7 +19,7 @@ import { logger } from './logger';
 import { PackageManager } from './packageManager';
 import { ParamManager } from './paramManager';
 
-const ext_map = {
+const extMap = {
     '.ico': 'image/x-icon',
     '.html': 'text/html',
     '.js': 'text/javascript',
@@ -35,87 +35,85 @@ const ext_map = {
     '.ttf': 'font/sfnt',
 };
 
-const pckg_manager = new PackageManager(process.cwd() + '/packages', getVersion());
-const param_manager = new ParamManager(process.cwd() + '/params/');
+const pckgManager = new PackageManager(process.cwd() + '/packages', getVersion());
+const paramManager = new ParamManager(process.cwd() + '/params/');
 
-const http_server = new HttpServer();
+const httpServer = new HttpServer();
 const aliases = {
     '/': '/settings.html',
 };
 
-//filehandlers
-http_server.on('filerequest', (raw_url: string, res: ServerResponse) => {
-    if (raw_url.match(/package/)) {
-        let start_i = raw_url.search(/package/);
-        let url = raw_url.slice(start_i);
+httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
+    if (req.url.match(/package/)) {
+        let startIndex = req.url.search(/package/);
+        let url = req.url.slice(startIndex);
         let folders = url.split('/');
         if (folders.length <= 2) {
             sendMessageResponse(res, ResponseCode.BAD_REQ, 'HTTPApi: invalid request');
         } else {
-            let pckg_name = folders[1];
-            let file_path = '/' + folders.slice(2).join('/');
-            if (pckg_manager.contains(pckg_name)) {
-                let parsed = path.parse(file_path);
-                let read = pckg_manager.packages[pckg_name].accessOnlineFile(file_path);
+            let pckgName = folders[1];
+            let filePath = '/' + folders.slice(2).join('/');
+            if (pckgManager.contains(pckgName)) {
+                let parsed = path.parse(filePath);
+                let read = pckgManager.packages[pckgName].accessOnlineFile(filePath);
                 if (read) {
                     res.writeHead(ResponseCode.OK, {
-                        'Content-Type': ext_map[parsed.ext],
+                        'Content-Type': extMap[parsed.ext],
                         'Content-Length': read[0].size,
                     });
                     read[1].pipe(res);
                 } else {
-                    sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: file ${file_path} not found`);
+                    sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: file ${filePath} not found`);
                 }
             } else {
-                sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: package ${pckg_name} not found`);
+                sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: package ${pckgName} not found`);
             }
         }
     } else {
-        let file_path =
-            raw_url in aliases ? './html' + path.normalize(aliases[raw_url]) : './html' + path.normalize(raw_url);
-        let parsed = path.parse(file_path);
-        if (fs.pathExistsSync(file_path)) {
-            let stat = fs.statSync(file_path);
+        let filePath =
+            req.url in aliases ? './html' + path.normalize(aliases[req.url]) : './html' + path.normalize(req.url);
+        let parsed = path.parse(filePath);
+        if (fs.pathExistsSync(filePath)) {
+            let stat = fs.statSync(filePath);
             res.writeHead(ResponseCode.OK, {
-                'Content-Type': ext_map[parsed.ext],
+                'Content-Type': extMap[parsed.ext],
                 'Content-Length': stat.size,
             });
-            let readStream = fs.createReadStream(file_path);
+            let readStream = fs.createReadStream(filePath);
             readStream.pipe(res);
         } else {
-            sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: file ${file_path} not found`);
+            sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: file ${filePath} not found`);
         }
     }
 });
 
-http_server.on(
-    'proxy',
-    (rest: string, req: IncomingMessage, res: ServerResponse, proxy_mirror: http_proxy, is_public: boolean) => {
-        let items = rest.split('/');
-        if (items.length < 2) {
-            sendMessageResponse(res, ResponseCode.INTERNAL_ERROR, `Wrong proxy format`);
-        } else {
-            let package_name = items[1];
-            if (package_name in pckg_manager.packages) {
-                let target_port: number;
-                if (is_public) {
-                    target_port = pckg_manager.packages[package_name].env_vars.http_port_public;
-                } else {
-                    target_port = pckg_manager.packages[package_name].env_vars.http_port;
-                }
-                req.url = '/' + rest;
-                proxy_mirror.web(req, res, {
-                    target: 'http://localhost:' + target_port,
-                });
+httpServer.on('proxy', (req: IncomingMessage, res: ServerResponse, isPublic: boolean) => {
+    const pathItems = req.url.split('/');
+    const proxyIndex = pathItems.indexOf('proxy');
+    if (proxyIndex === -1 || pathItems.length < proxyIndex + 2) {
+        sendMessageResponse(res, ResponseCode.INTERNAL_ERROR, `Wrong proxy format`);
+    } else {
+        const packageName = pathItems[proxyIndex + 1];
+        if (packageName in pckgManager.packages) {
+            let targetPort: number;
+            if (isPublic) {
+                targetPort = pckgManager.packages[packageName].envVars.httpPortPublic;
             } else {
-                sendMessageResponse(res, ResponseCode.NOT_FOUND, `Cannot find package to proxy`);
+                targetPort = pckgManager.packages[packageName].envVars.httpPort;
             }
+            const targetPath = '/' + pathItems.slice(proxyIndex + 2).join('/');
+            const proxy = http_proxy.createProxyServer();
+            proxy.web(req, res, {
+                target: `http://localhost:${targetPort}${targetPath}`,
+                ignorePath: true,
+            });
+        } else {
+            sendMessageResponse(res, ResponseCode.NOT_FOUND, `Cannot find package to proxy`);
         }
     }
-);
+});
 
-//VAPIX
-http_server.registerDataCGI('/param.cgi', (url, res, files, fields) => {
+httpServer.registerDataCGI('/param.cgi', (url, req, res, files, fields) => {
     let action = url.searchParams.get('action') || fields['action'].toString();
     switch (action) {
         case 'update':
@@ -125,22 +123,22 @@ http_server.registerDataCGI('/param.cgi', (url, res, files, fields) => {
                 if (splitted[0] != 'camscripter' || splitted.length !== 2) {
                     sendMessageResponse(res, ResponseCode.BAD_REQ, 'Vapix-Sim: Unsupported parameters');
                 } else {
-                    let param_name = splitted[1];
+                    let paramName = splitted[1];
                     let value = fields[f];
-                    if (typeof value === 'string') param_manager.update(param_name, JSON.parse(value));
+                    if (typeof value === 'string') paramManager.update(paramName, JSON.parse(value));
                 }
             }
             sendMessageResponse(res, ResponseCode.OK, 'OK');
             break;
 
         case 'list':
-            let group_name = url.searchParams.get('group').toLowerCase();
-            let splitted = group_name.split('.');
+            let groupName = url.searchParams.get('group').toLowerCase();
+            let splitted = groupName.split('.');
             if (splitted[0] != 'camscripter' || splitted.length !== 2) {
                 sendMessageResponse(res, ResponseCode.BAD_REQ, 'Vapix-Sim: Unsupported parameters');
             } else {
-                let param_name = splitted[1];
-                sendParamResponse(res, ResponseCode.OK, group_name, param_manager.get(param_name));
+                let paramName = splitted[1];
+                sendParamResponse(res, ResponseCode.OK, groupName, paramManager.get(paramName));
             }
             break;
         default:
@@ -148,24 +146,24 @@ http_server.registerDataCGI('/param.cgi', (url, res, files, fields) => {
     }
 });
 
-http_server.registerRequestCGI('/systemlog.cgi', (url, res) => {
-    const pckg_name = url.searchParams.get('package_name');
-    if (pckg_name) {
-        if (pckg_name === 'system') {
-            const file_path = Paths.SYSLOG;
-            if (fs.pathExistsSync(file_path)) {
-                const stat = fs.statSync(file_path);
+httpServer.registerRequestCGI('/systemlog.cgi', (url, req, res) => {
+    const pckgName = url.searchParams.get('package_name');
+    if (pckgName) {
+        if (pckgName === 'system') {
+            const filePath = Paths.SYSLOG;
+            if (fs.pathExistsSync(filePath)) {
+                const stat = fs.statSync(filePath);
                 res.writeHead(ResponseCode.OK, {
                     'Content-Type': 'text/plain',
                     'Content-Length': stat.size,
                 });
-                const readStream = fs.createReadStream(file_path, { end: stat.size });
+                const readStream = fs.createReadStream(filePath, { end: stat.size });
                 readStream.pipe(res);
             } else {
                 sendMessageResponse(res, ResponseCode.NOT_FOUND, 'Vapix-Sim - file not found');
             }
-        } else if (pckg_manager.contains(pckg_name)) {
-            const logFile = pckg_manager.packages[pckg_name].accessLogFile();
+        } else if (pckgManager.contains(pckgName)) {
+            const logFile = pckgManager.packages[pckgName].accessLogFile();
             if (logFile) {
                 res.writeHead(ResponseCode.OK, {
                     'Content-Type': 'text/plain',
@@ -187,14 +185,13 @@ http_server.registerRequestCGI('/systemlog.cgi', (url, res) => {
     }
 });
 
-http_server.registerRequestCGI('/version.cgi', (url, res) => {
+httpServer.registerRequestCGI('/version.cgi', (url, req, res) => {
     sendMessageResponse(res, ResponseCode.OK, getVersion().join('.'));
 });
 
-//CAMSCRIPTER
-http_server.registerDataCGI('/package/install.cgi', async (url, res, files: Files, fields: Fields) => {
-    let return_code = ResponseCode.OK;
-    let return_message = 'OK';
+httpServer.registerDataCGI('/package/install.cgi', async (url, req, res, files: Files, fields: Fields) => {
+    let returnCode = ResponseCode.OK;
+    let returnMessage = 'OK';
     for (let i in files) {
         const name = path.parse(files[i]['name']);
         const fpath = files[i]['path'];
@@ -204,11 +201,11 @@ http_server.registerDataCGI('/package/install.cgi', async (url, res, files: File
                 const tmpPckgDir = process.cwd() + '/tmp_pckgs/' + name.name;
                 await fs.remove(tmpPckgDir);
                 await extractArchive(fpath, tmpPckgDir);
-                await pckg_manager.installPackage(process.cwd() + '/tmp_pckgs/' + name.name);
+                await pckgManager.installPackage(process.cwd() + '/tmp_pckgs/' + name.name);
             } catch (err) {
                 console.log(err);
-                return_code = ResponseCode.INTERNAL_ERROR;
-                return_message = err.message;
+                returnCode = ResponseCode.INTERNAL_ERROR;
+                returnMessage = err.message;
             } finally {
                 await fs.remove(process.cwd() + '/tmp_pckgs/' + name.name);
                 await fs.remove(fpath);
@@ -218,18 +215,18 @@ http_server.registerDataCGI('/package/install.cgi', async (url, res, files: File
             await fs.remove(fpath);
         }
     }
-    sendMessageResponse(res, return_code, return_message);
+    sendMessageResponse(res, returnCode, returnMessage);
 });
 
-http_server.registerRequestCGI('/package/remove.cgi', (url, res) => {
+httpServer.registerRequestCGI('/package/remove.cgi', (url, req, res) => {
     try {
-        let pckg_name = url.searchParams.get('package_name');
-        if (!pckg_name) {
+        let pckgName = url.searchParams.get('package_name');
+        if (!pckgName) {
             sendJsonResponse(res, ResponseCode.BAD_REQ, {
                 message: 'No name provided!',
             });
-        } else if (pckg_manager.contains(pckg_name)) {
-            pckg_manager.uninstallPackage(pckg_name);
+        } else if (pckgManager.contains(pckgName)) {
+            pckgManager.uninstallPackage(pckgName);
             sendJsonResponse(res, ResponseCode.OK, {});
         } else {
             sendJsonResponse(res, ResponseCode.NOT_FOUND, { message: 'Not Found' });
@@ -240,23 +237,23 @@ http_server.registerRequestCGI('/package/remove.cgi', (url, res) => {
     }
 });
 
-http_server.registerRequestCGI('/package/list.cgi', (url, res) => {
+httpServer.registerRequestCGI('/package/list.cgi', (url, req, res) => {
     try {
-        sendJsonResponse(res, ResponseCode.OK, pckg_manager.listManifests());
+        sendJsonResponse(res, ResponseCode.OK, pckgManager.listManifests());
     } catch (err) {
         console.log(err);
         sendJsonResponse(res, ResponseCode.NOT_FOUND, { message: `Package list error: ${err.message}` });
     }
 });
 
-http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files, fields: Fields) => {
-    let pckg_name = url.searchParams.get('package_name');
+httpServer.registerDataCGI('/package/ldata.cgi', async (url, req, res, files: Files, fields: Fields) => {
+    let pckgName = url.searchParams.get('package_name');
     let action = url.searchParams.get('action');
-    let compression_level = parseInt(url.searchParams.get('compression_level'));
+    let compressionLevel = parseInt(url.searchParams.get('compression_level'));
     switch (action) {
         case 'IMPORT':
-            let return_code = ResponseCode.OK;
-            let return_message = 'OK';
+            let returnCode = ResponseCode.OK;
+            let returnMessage = 'OK';
             for (let i in files) {
                 let name = path.parse(files[i]['name']);
                 let fpath = files[i]['path'];
@@ -266,13 +263,13 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
                         const tmpPckgDir = process.cwd() + '/tmp_data/' + name.name;
                         await fs.remove(tmpPckgDir);
                         await extractArchive(fpath, tmpPckgDir);
-                        let pckg = pckg_manager.packages[pckg_name];
-                        let localdata_path = pckg.env_vars.persistent_data_path;
-                        fs.removeSync(localdata_path);
-                        fs.copySync(process.cwd() + '/tmp_data/' + name.name, localdata_path);
+                        let pckg = pckgManager.packages[pckgName];
+                        let localdataPath = pckg.envVars.persistentDataPath;
+                        fs.removeSync(localdataPath);
+                        fs.copySync(process.cwd() + '/tmp_data/' + name.name, localdataPath);
                     } catch (err) {
-                        return_code = ResponseCode.INTERNAL_ERROR;
-                        return_message = err;
+                        returnCode = ResponseCode.INTERNAL_ERROR;
+                        returnMessage = err;
                     } finally {
                         fs.removeSync(process.cwd() + '/tmp_data/' + name.name);
                     }
@@ -281,15 +278,15 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
                 }
                 fs.removeSync(fpath);
             }
-            sendMessageResponse(res, return_code, return_message);
+            sendMessageResponse(res, returnCode, returnMessage);
             break;
         case 'EXPORT':
             let archie = archiver('zip', {
-                zlib: { level: compression_level },
+                zlib: { level: compressionLevel },
             });
-            let pckg = pckg_manager.packages[pckg_name];
-            let localdata_path = pckg.env_vars.persistent_data_path;
-            archie.directory(localdata_path, false);
+            let pckg = pckgManager.packages[pckgName];
+            let localdataPath = pckg.envVars.persistentDataPath;
+            archie.directory(localdataPath, false);
             await sendArchiverResponse(res, ResponseCode.OK, archie);
             break;
         default:
@@ -297,25 +294,25 @@ http_server.registerDataCGI('/package/ldata.cgi', async (url, res, files: Files,
     }
 });
 
-http_server.registerDataCGI('/package/settings.cgi', (url, res, files, fields) => {
-    let pckg_name = url.searchParams.get('package_name');
+httpServer.registerDataCGI('/package/settings.cgi', (url, req, res, files, fields) => {
+    let pckgName = url.searchParams.get('package_name');
     let action = url.searchParams.get('action');
-    if (!pckg_name || !action) {
+    if (!pckgName || !action) {
         sendMessageResponse(res, ResponseCode.BAD_REQ, 'Crucial attributes missing!');
     } else {
         switch (action) {
             case 'get':
-                if (pckg_manager.contains(pckg_name)) {
-                    let pack = pckg_manager.packages[pckg_name];
+                if (pckgManager.contains(pckgName)) {
+                    let pack = pckgManager.packages[pckgName];
                     sendJsonResponse(res, ResponseCode.OK, pack.getSettings());
                 } else {
                     sendMessageResponse(res, ResponseCode.NOT_FOUND, 'Package not found');
                 }
                 break;
             case 'set':
-                if (pckg_manager.contains(pckg_name)) {
+                if (pckgManager.contains(pckgName)) {
                     try {
-                        let pack = pckg_manager.packages[pckg_name];
+                        let pack = pckgManager.packages[pckgName];
                         for (let i in fields) {
                             pack.setSettings(JSON.parse(i));
                         }
@@ -332,6 +329,29 @@ http_server.registerDataCGI('/package/settings.cgi', (url, res, files, fields) =
                 sendMessageResponse(res, ResponseCode.BAD_REQ, 'Invalid action');
         }
     }
+});
+
+httpServer.registerRequestCGI('/proxy.cgi', async (url, req, res) => {
+    const targetProtocol = req.headers['x-target-camera-protocol'];
+    const targetIp = req.headers['x-target-camera-ip'] as string;
+    const targetPort = req.headers['x-target-camera-port'] as string;
+    const targetUser = req.headers['x-target-camera-user'] as string;
+    const targetPass = req.headers['x-target-camera-pass'] as string;
+    const targetPath = req.headers['x-target-camera-path'] as string;
+
+    const proxy = http_proxy.createProxyServer();
+    proxy.web(req, res, {
+        target: `${targetProtocol}://${targetIp}:${targetPort}${targetPath}`,
+        auth: `${targetUser}:${targetPass}`,
+        ignorePath: true,
+    });
+
+    proxy.on('proxyRes', function (proxyRes, req, res) {
+        if (proxyRes.statusCode === 401) {
+            proxyRes.statusCode = 400;
+            proxyRes.statusMessage = 'Bad Request';
+        }
+    });
 });
 
 function extractArchive(archive: string, dirName: string) {
@@ -391,18 +411,18 @@ process.on('unhandledRejection - ', (err: Error) => {
     logger.logError('unhandledRejection: ' + err.stack ?? err.toString());
 });
 
-param_manager.on('ready', () => {
-    marry(pckg_manager, param_manager);
+paramManager.on('ready', () => {
+    marry(pckgManager, paramManager);
 });
-pckg_manager.on('ready', () => {
-    marry(pckg_manager, param_manager);
+pckgManager.on('ready', () => {
+    marry(pckgManager, paramManager);
 });
 
-async function marry(pckg_man: PackageManager, param_man: ParamManager) {
-    if (pckg_man.ready && param_man.ready) {
-        pckg_manager.connect(param_manager.params['packageconfigurations']);
+async function marry(pckgManager: PackageManager, paramManager: ParamManager) {
+    if (pckgManager.ready && paramManager.ready) {
+        pckgManager.connect(paramManager.params['packageconfigurations']);
         logger.logInfo('Starting Camscripter Server');
-        http_server.start(52520);
+        httpServer.start(52520);
         logger.logInfo('Camscripter listening on 0.0.0.0:52520');
     }
 }

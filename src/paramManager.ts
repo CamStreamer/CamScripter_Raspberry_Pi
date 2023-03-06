@@ -8,7 +8,7 @@ import { logger } from './logger';
 export class ParamManager extends EventEmitter {
     storage: string;
     params: { [key: string]: ParamGroup };
-    watch_dog: chokidar.FSWatcher;
+    watchDog: chokidar.FSWatcher;
     ready: boolean;
     constructor(folder: string) {
         super();
@@ -22,8 +22,8 @@ export class ParamManager extends EventEmitter {
     private async init() {
         await this.createDefaultConfiguration();
 
-        this.watch_dog = chokidar.watch(this.storage);
-        this.watch_dog.on('add', (pathFile) => {
+        this.watchDog = chokidar.watch(this.storage);
+        this.watchDog.on('add', (pathFile) => {
             let parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
                 this.params[parsed.name] = new ParamGroup(parsed.name, pathFile);
@@ -31,7 +31,7 @@ export class ParamManager extends EventEmitter {
             this.emit('new', parsed.name);
         });
 
-        this.watch_dog.on('change', (pathFile) => {
+        this.watchDog.on('change', (pathFile) => {
             let parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
                 logger.logInfo('Refreshing: ' + parsed.name);
@@ -40,7 +40,7 @@ export class ParamManager extends EventEmitter {
             }
         });
 
-        this.watch_dog.on('ready', () => {
+        this.watchDog.on('ready', () => {
             let filenames = fs.readdirSync(this.storage);
             filenames.forEach((file) => {
                 let parsed = path.parse(file);
@@ -66,9 +66,9 @@ export class ParamManager extends EventEmitter {
         }
     }
 
-    private configurationExist(param_name) {
+    private configurationExist(paramName) {
         return new Promise<boolean>((resolve) => {
-            fs.access(this.storage + param_name + '.json', (err) => {
+            fs.access(this.storage + paramName + '.json', (err) => {
                 resolve(err === undefined);
             });
         });
@@ -94,23 +94,23 @@ export class ParamManager extends EventEmitter {
 export class ParamGroup extends EventEmitter {
     name: string;
     value: object;
-    file_name: string;
-    constructor(name: string, file_name: string) {
+    fileName: string;
+    constructor(name: string, fileName: string) {
         super();
-        let raw_json = fs.readFileSync(file_name);
-        this.file_name = file_name;
+        let rawJson = fs.readFileSync(fileName);
+        this.fileName = fileName;
         this.name = name;
-        this.value = JSON.parse(raw_json.toString());
+        this.value = JSON.parse(rawJson.toString());
     }
 
     update(value: object): void {
-        fs.writeFileSync(this.file_name, JSON.stringify(value));
+        fs.writeFileSync(this.fileName, JSON.stringify(value));
         this.value = value;
     }
 
     refresh(): void {
-        let raw_json = fs.readFileSync(this.file_name);
-        this.value = JSON.parse(raw_json.toString());
+        let rawJson = fs.readFileSync(this.fileName);
+        this.value = JSON.parse(rawJson.toString());
         logger.logDebug('Parameter ' + this.name + ' new value: ' + JSON.stringify(this.value));
         this.emit('refresh');
     }

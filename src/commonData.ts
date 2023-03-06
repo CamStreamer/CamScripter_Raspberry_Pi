@@ -7,16 +7,16 @@ export enum Paths {
 
 export function getVersion(): string[] {
     if (fs.existsSync(Paths.PACKAGE)) {
-        let raw_pckg = fs.readFileSync(Paths.PACKAGE);
-        let pckg = JSON.parse(raw_pckg.toString());
+        let rawPckg = fs.readFileSync(Paths.PACKAGE);
+        let pckg = JSON.parse(rawPckg.toString());
         return pckg['version'].split('.');
     }
     throw 'No version file found!';
 }
 
 export type Enviroment = {
-    http_port: number;
-    http_port_public: number;
-    persistent_data_path: string;
-    install_path: string;
+    httpPort: number;
+    httpPortPublic: number;
+    persistentDataPath: string;
+    installPath: string;
 };

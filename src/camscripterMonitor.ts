@@ -11,23 +11,23 @@ import { logger } from './logger';
 type MonitorOptions = {
     env: Enviroment;
     cwd: string;
-    restart_delay: number;
-    spin_time?: number;
-    log_path: string;
+    restartDelay: number;
+    spinTime?: number;
+    logPath: string;
 };
 
 export class CamScripterMonitor extends EventEmitter {
     path: string;
-    restart_delay: number;
-    spin_time: number;
+    restartDelay: number;
+    spinTime: number;
     enable: boolean;
     env: Enviroment;
     cwd: string;
-    log_path: string;
-    process_control: cp.ChildProcess;
-    process_stream: Duplex;
-    process_log: readline.ReadLine;
-    file_stream: WriteStream;
+    logPath: string;
+    processControl: cp.ChildProcess;
+    processStream: Duplex;
+    processLog: readline.ReadLine;
+    fileStream: WriteStream;
     restartTimeout: NodeJS.Timeout;
     constructor(path: string, options: MonitorOptions) {
         super();
@@ -35,31 +35,31 @@ export class CamScripterMonitor extends EventEmitter {
         this.path = path;
         this.env = options.env;
         this.cwd = options.cwd;
-        this.restart_delay = options.restart_delay; //ms
-        this.spin_time = options.spin_time;
-        this.log_path = options.log_path;
+        this.restartDelay = options.restartDelay; //ms
+        this.spinTime = options.spinTime;
+        this.logPath = options.logPath;
     }
 
     start() {
         if (this.enable) {
             throw 'Process was already set to run';
         } else {
-            this._newChildProcess();
+            this.newChildProcess();
             this.enable = true;
             this.emit('start');
         }
     }
     stop() {
-        if (this.process_control && this.process_control.exitCode === null) {
-            this.process_control.removeAllListeners();
-            this.process_control.kill('SIGTERM');
+        if (this.processControl && this.processControl.exitCode === null) {
+            this.processControl.removeAllListeners();
+            this.processControl.kill('SIGTERM');
             clearTimeout(this.restartTimeout);
             this.enable = false;
-            const current_process = this.process_control;
+            const currentProcess = this.processControl;
             setTimeout(() => {
-                this.brutalize(current_process);
+                this.brutalize(currentProcess);
             }, 1500);
-        } else if (this.process_control && this.enable) {
+        } else if (this.processControl && this.enable) {
             clearTimeout(this.restartTimeout);
             this.enable = false;
         } else {
@@ -70,10 +70,10 @@ export class CamScripterMonitor extends EventEmitter {
 
     restart(signal: NodeJS.Signals) {
         if (this.enable) {
-            if (!this.process_control) {
+            if (!this.processControl) {
                 throw 'There has to a process running to soft restart!';
-            } else if (this.process_control.exitCode === null) {
-                this.process_control.kill(signal);
+            } else if (this.processControl.exitCode === null) {
+                this.processControl.kill(signal);
             }
         }
     }
@@ -89,41 +89,41 @@ export class CamScripterMonitor extends EventEmitter {
         this.emit('killed');
     }
 
-    _newChildProcess() {
-        this.process_stream = new Stream.PassThrough();
-        this.process_log = readline.createInterface({
-            input: this.process_stream,
+    private newChildProcess() {
+        this.processStream = new Stream.PassThrough();
+        this.processLog = readline.createInterface({
+            input: this.processStream,
             output: process.stdout,
         });
-        this.process_log.on('line', (line) => {
+        this.processLog.on('line', (line) => {
             let date = new Date();
-            fs.appendFileSync(this.log_path, date.toISOString() + ': ' + line + '\n');
+            fs.appendFileSync(this.logPath, date.toISOString() + ': ' + line + '\n');
         });
 
-        this.process_control = cp.fork(this.path, {
+        this.processControl = cp.fork(this.path, {
             cwd: this.cwd,
             stdio: [null, 'pipe', 'pipe', 'ipc'],
             env: {
-                HTTP_PORT: this.env.http_port.toString(),
-                HTTP_PORT_PUBLIC: this.env.http_port_public.toString(),
-                INSTALL_PATH: this.env.install_path.toString(),
-                PERSISTENT_DATA_PATH: this.env.persistent_data_path.toString(),
+                HTTP_PORT: this.env.httpPort.toString(),
+                HTTP_PORT_PUBLIC: this.env.httpPortPublic.toString(),
+                INSTALL_PATH: this.env.installPath.toString(),
+                PERSISTENT_DATA_PATH: this.env.persistentDataPath.toString(),
             },
         });
-        this.process_control.stderr.pipe(this.process_stream);
-        this.process_control.stdout.pipe(this.process_stream);
-        this.process_control.on('error', (err) => {
+        this.processControl.stderr.pipe(this.processStream);
+        this.processControl.stdout.pipe(this.processStream);
+        this.processControl.on('error', (err) => {
             logger.logError('Error in process ' + this.path + ': ' + err);
         });
 
-        this.process_control.on('close', (code, signal) => {
-            this.process_control.removeAllListeners();
+        this.processControl.on('close', (code, signal) => {
+            this.processControl.removeAllListeners();
             this.restartTimeout = setTimeout(() => {
                 if (this.enable) {
-                    this._newChildProcess();
+                    this.newChildProcess();
                     this.emit('restart');
                 }
-            }, this.restart_delay);
+            }, this.restartDelay);
         });
     }
 }

@@ -22,35 +22,35 @@ class CustomLogger {
     logError(text: string): void {
         if (this.level < LogPriority.ERROR) return;
         console.log(text);
-        this._log2Path(logger.path, text);
+        this.log2Path(logger.path, text);
     }
     logWarning(text: string): void {
         if (this.level < LogPriority.WARNING) return;
         console.log(text);
-        this._log2Path(logger.path, text);
+        this.log2Path(logger.path, text);
     }
     logInfo(text: string): void {
         if (this.level < LogPriority.INFO) return;
         console.log(text);
-        this._log2Path(logger.path, text);
+        this.log2Path(logger.path, text);
     }
     logHttp(text: string): void {
         if (this.level < LogPriority.HTTP) return;
         console.log(text);
-        this._log2Path(logger.path, text);
+        this.log2Path(logger.path, text);
     }
     logDebug(text: string): void {
         if (this.level < LogPriority.DEBUG) return;
 
         console.log(text);
-        this._log2Path(logger.path, text);
+        this.log2Path(logger.path, text);
     }
     logSilly(text: string): void {
         if (this.level < LogPriority.SILLY) return;
         console.log(text);
-        this._log2Path(logger.path, text);
+        this.log2Path(logger.path, text);
     }
-    _log2Path(path: string, text: string): void {
+    private log2Path(path: string, text: string): void {
         try {
             let date = new Date();
             fs.appendFileSync(path, date.toISOString() + ': ' + text + '\n');
