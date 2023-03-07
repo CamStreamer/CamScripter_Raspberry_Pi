@@ -276,11 +276,10 @@ export class Package {
     }
 
     getSettings(): object {
-        let setPath = this.envVars.persistentDataPath + 'settings.json';
+        const setPath = this.envVars.persistentDataPath + 'settings.json';
         if (fs.pathExistsSync(setPath)) {
             try {
-                let json = fs.readJSONSync(setPath);
-                return json;
+                return fs.readJSONSync(setPath);
             } catch (err) {
                 logger.logError(err);
                 return {};
@@ -291,7 +290,7 @@ export class Package {
     }
 
     setSettings(jsonObj: object): void {
-        let setPath = this.envVars.persistentDataPath + 'settings.json';
+        const setPath = this.envVars.persistentDataPath + 'settings.json';
         fs.writeJsonSync(setPath, jsonObj);
     }
 

@@ -295,17 +295,17 @@ httpServer.registerDataCGI('/package/ldata.cgi', async (url, req, res, files: Fi
     }
 });
 
-httpServer.registerDataCGI('/package/settings.cgi', (url, req, res, files, fields) => {
-    let pckgName = url.searchParams.get('package_name');
-    let action = url.searchParams.get('action');
+httpServer.registerRequestCGI('/package/settings.cgi', (url, req, res) => {
+    const pckgName = url.searchParams.get('package_name');
+    const action = url.searchParams.get('action');
     if (!pckgName || !action) {
         sendMessageResponse(res, ResponseCode.BAD_REQ, 'Crucial attributes missing!');
     } else {
         switch (action) {
             case 'get':
                 if (pckgManager.contains(pckgName)) {
-                    let pack = pckgManager.packages[pckgName];
-                    sendJsonResponse(res, ResponseCode.OK, pack.getSettings());
+                    const pckg = pckgManager.packages[pckgName];
+                    sendJsonResponse(res, ResponseCode.OK, pckg.getSettings());
                 } else {
                     sendMessageResponse(res, ResponseCode.NOT_FOUND, 'Package not found');
                 }
@@ -313,11 +313,15 @@ httpServer.registerDataCGI('/package/settings.cgi', (url, req, res, files, field
             case 'set':
                 if (pckgManager.contains(pckgName)) {
                     try {
-                        let pack = pckgManager.packages[pckgName];
-                        for (let i in fields) {
-                            pack.setSettings(JSON.parse(i));
-                        }
-                        sendMessageResponse(res, ResponseCode.OK, 'OK');
+                        let settingsData = [];
+                        req.on('data', (chunk) => {
+                            settingsData.push(chunk);
+                        });
+                        req.on('end', () => {
+                            const pckg = pckgManager.packages[pckgName];
+                            pckg.setSettings(JSON.parse(Buffer.concat(settingsData).toString()));
+                            sendMessageResponse(res, ResponseCode.OK, 'OK');
+                        });
                     } catch (err) {
                         logger.logError(err);
                         sendMessageResponse(res, ResponseCode.INTERNAL_ERROR, 'File Writing Error');
