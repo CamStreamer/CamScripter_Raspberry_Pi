@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as yauzl from 'yauzl';
 
 import { getVersion, Paths } from './commonData';
+import { HttpProxy, Target } from './httpProxy';
 import {
     ResponseCode,
     sendArchiverResponse,
@@ -332,26 +333,23 @@ httpServer.registerDataCGI('/package/settings.cgi', (url, req, res, files, field
 });
 
 httpServer.registerRequestCGI('/proxy.cgi', async (url, req, res) => {
-    const targetProtocol = req.headers['x-target-camera-protocol'];
-    const targetIp = req.headers['x-target-camera-ip'] as string;
-    const targetPort = req.headers['x-target-camera-port'] as string;
-    const targetUser = req.headers['x-target-camera-user'] as string;
-    const targetPass = req.headers['x-target-camera-pass'] as string;
-    const targetPath = req.headers['x-target-camera-path'] as string;
+    const target: Target = {
+        protocol: req.headers['x-target-camera-protocol'] as string,
+        host: req.headers['x-target-camera-ip'] as string,
+        port: parseInt(req.headers['x-target-camera-port'] as string),
+        path: req.headers['x-target-camera-path'] as string,
+        username: req.headers['x-target-camera-user'] as string,
+        password: req.headers['x-target-camera-pass'] as string,
+    };
+    delete req.headers['x-target-camera-protocol'];
+    delete req.headers['x-target-camera-ip'];
+    delete req.headers['x-target-camera-port'];
+    delete req.headers['x-target-camera-path'];
+    delete req.headers['x-target-camera-user'];
+    delete req.headers['x-target-camera-pass'];
 
-    const proxy = http_proxy.createProxyServer();
-    proxy.web(req, res, {
-        target: `${targetProtocol}://${targetIp}:${targetPort}${targetPath}`,
-        auth: `${targetUser}:${targetPass}`,
-        ignorePath: true,
-    });
-
-    proxy.on('proxyRes', function (proxyRes, req, res) {
-        if (proxyRes.statusCode === 401) {
-            proxyRes.statusCode = 400;
-            proxyRes.statusMessage = 'Bad Request';
-        }
-    });
+    const proxy = new HttpProxy();
+    proxy.request(target, req, res);
 });
 
 function extractArchive(archive: string, dirName: string) {
