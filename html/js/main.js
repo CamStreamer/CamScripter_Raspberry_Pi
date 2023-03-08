@@ -144,9 +144,6 @@ function uploadPackageAction() {
       getPackageList();
       $('#uploadManager').modal('hide');
       makeAlert('new-package', 'New package <strong>' + name[0] + '</strong> was uploaded on camera.', 'info', true, true);
-    }).done((response) => {
-      $('#uploadedFileHelp').text('Something went wrong, please try again.').addClass('alert alert-danger');
-      logError(response.message, response.status);
     }).always(() => {
       $('#fileUpload').html('Upload Package');
     });
