@@ -9,7 +9,6 @@ After=network.target
 [Service]
 WorkingDirectory=$SCRIPT_PATH
 ExecStart=node $SCRIPT_PATH/dist/main.js
-ExecStop=node $SCRIPT_PATH/dist/main.js agent stop
 Restart=always
 LimitNOFILE=1000000
 User=$( whoami )
