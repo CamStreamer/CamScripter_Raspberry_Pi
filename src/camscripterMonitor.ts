@@ -11,16 +11,14 @@ import { logger } from './logger';
 type MonitorOptions = {
     env: Enviroment;
     cwd: string;
-    restartDelay: number;
     spinTime?: number;
     logPath: string;
 };
 
 export class CamScripterMonitor extends EventEmitter {
     path: string;
-    restartDelay: number;
     spinTime: number;
-    enable: boolean;
+    enabled: boolean;
     env: Enviroment;
     cwd: string;
     logPath: string;
@@ -29,23 +27,25 @@ export class CamScripterMonitor extends EventEmitter {
     processLog: readline.ReadLine;
     fileStream: WriteStream;
     restartTimeout: NodeJS.Timeout;
+    restartDelay = 5000;
+    readonly defaultRestartDelay = 5000;
+
     constructor(path: string, options: MonitorOptions) {
         super();
-        this.enable = false;
+        this.enabled = false;
         this.path = path;
         this.env = options.env;
         this.cwd = options.cwd;
-        this.restartDelay = options.restartDelay; //ms
         this.spinTime = options.spinTime;
         this.logPath = options.logPath;
     }
 
     start() {
-        if (this.enable) {
+        if (this.enabled) {
             throw 'Process was already set to run';
         } else {
             this.newChildProcess();
-            this.enable = true;
+            this.enabled = true;
             this.emit('start');
         }
     }
@@ -54,14 +54,14 @@ export class CamScripterMonitor extends EventEmitter {
             this.processControl.removeAllListeners();
             this.processControl.kill('SIGTERM');
             clearTimeout(this.restartTimeout);
-            this.enable = false;
+            this.enabled = false;
             const currentProcess = this.processControl;
             setTimeout(() => {
                 this.brutalize(currentProcess);
             }, 1500);
-        } else if (this.processControl && this.enable) {
+        } else if (this.processControl && this.enabled) {
             clearTimeout(this.restartTimeout);
-            this.enable = false;
+            this.enabled = false;
         } else {
             throw 'This process has been set to stop';
         }
@@ -69,10 +69,11 @@ export class CamScripterMonitor extends EventEmitter {
     }
 
     restart(signal: NodeJS.Signals) {
-        if (this.enable) {
+        if (this.enabled) {
             if (!this.processControl) {
                 throw 'There has to a process running to soft restart!';
             } else if (this.processControl.exitCode === null) {
+                this.restartDelay = 0;
                 this.processControl.kill(signal);
             }
         }
@@ -82,7 +83,7 @@ export class CamScripterMonitor extends EventEmitter {
         if (process && process.exitCode === null) {
             process.removeAllListeners();
             process.kill('SIGKILL');
-        } else if (!this.enable) {
+        } else if (!this.enabled) {
             return;
         }
         clearTimeout(this.restartTimeout);
@@ -119,7 +120,8 @@ export class CamScripterMonitor extends EventEmitter {
         this.processControl.on('close', (code, signal) => {
             this.processControl.removeAllListeners();
             this.restartTimeout = setTimeout(() => {
-                if (this.enable) {
+                this.restartDelay = this.defaultRestartDelay;
+                if (this.enabled) {
                     this.newChildProcess();
                     this.emit('restart');
                 }

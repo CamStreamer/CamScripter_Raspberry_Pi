@@ -243,7 +243,6 @@ export class Package {
             cwd: this.storage,
             logPath: this.storage + '/localdata/log.txt',
             env: this.envVars,
-            restartDelay: 5000,
         });
 
         this.process.on('start', () => {
