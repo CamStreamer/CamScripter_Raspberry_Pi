@@ -69,7 +69,11 @@ export class ParamManager extends EventEmitter {
     private configurationExist(paramName) {
         return new Promise<boolean>((resolve) => {
             fs.access(this.storage + paramName + '.json', (err) => {
-                resolve(err === undefined);
+                if (err) {
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
             });
         });
     }

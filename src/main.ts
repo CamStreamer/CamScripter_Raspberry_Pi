@@ -71,8 +71,10 @@ httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
             }
         }
     } else {
-        let filePath =
-            req.url in aliases ? './html' + path.normalize(aliases[req.url]) : './html' + path.normalize(req.url);
+        let filePath = `./html${path.normalize(req.url)}`;
+        if (req.url in aliases) {
+            filePath = `./html${path.normalize(aliases[req.url])}`;
+        }
         let parsed = path.parse(filePath);
         if (fs.pathExistsSync(filePath)) {
             let stat = fs.statSync(filePath);

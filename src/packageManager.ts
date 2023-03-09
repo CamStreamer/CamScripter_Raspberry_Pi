@@ -204,11 +204,19 @@ export class PackageManager extends EventEmitter {
     }
 
     listManifests(): Manifest[] {
-        let list = [];
-        for (let p in this.packages) {
-            list.push(this.packages[p].readManifest());
+        let list: Manifest[] = [];
+        for (let pckgName in this.packages) {
+            list.push(this.packages[pckgName].readManifest());
         }
-        return list;
+        return list.sort((a, b) => {
+            if (a.package_menu_name < b.package_menu_name) {
+                return -1;
+            }
+            if (a.package_menu_name > b.package_menu_name) {
+                return 1;
+            }
+            return 0;
+        });
     }
 }
 
