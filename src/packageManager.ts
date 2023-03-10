@@ -20,42 +20,42 @@ export class PackageManager extends EventEmitter {
     storage: string;
     packages: Record<string, Package>;
     packagesRegisterPrms: Record<string, Promise<void>>;
-    pckdir_watch: chokidar.FSWatcher;
-    pckdir_watch_pause: boolean;
-    settings_watch: chokidar.FSWatcher;
-    directive_params: ParamGroup;
+    pckdirWatch: chokidar.FSWatcher;
+    pckdirWatchPause: boolean;
+    settingsWatch: chokidar.FSWatcher;
+    directiveParams: ParamGroup;
     version: string[];
-    lock_mode: boolean;
+    lockMode: boolean;
     ready: boolean;
 
     constructor(storage: string, version: string[]) {
         super();
-        this.lock_mode = false;
+        this.lockMode = false;
         this.storage = storage;
         this.packages = {};
         this.packagesRegisterPrms = {};
-        this.pckdir_watch_pause = false;
+        this.pckdirWatchPause = false;
         this.version = version;
         this.ready = false;
 
-        this.pckdir_watch = chokidar.watch(`${storage}`, { depth: 0 });
-        this.pckdir_watch.on('addDir', (path_dir) => {
-            if (this.pckdir_watch_pause) {
+        this.pckdirWatch = chokidar.watch(`${storage}`, { depth: 0 });
+        this.pckdirWatch.on('addDir', (pathDir) => {
+            if (this.pckdirWatchPause) {
                 return;
             }
-            const parsed = path.parse(path_dir);
+            const parsed = path.parse(pathDir);
             if (parsed.name !== 'packages') {
                 this.packagesRegisterPrms[parsed.name] = this.registerPackage(parsed.name);
             }
         });
-        this.pckdir_watch.on('unlinkDir', (path_dir) => {
-            if (this.pckdir_watch_pause) {
+        this.pckdirWatch.on('unlinkDir', (pathDir) => {
+            if (this.pckdirWatchPause) {
                 return;
             }
-            const parsed = path.parse(path_dir);
+            const parsed = path.parse(pathDir);
             this.unregisterPackage(parsed.name);
         });
-        this.pckdir_watch.on('ready', async () => {
+        this.pckdirWatch.on('ready', async () => {
             try {
                 await Promise.all(Object.values(this.packagesRegisterPrms));
                 for (let name in this.packages) {
@@ -68,50 +68,50 @@ export class PackageManager extends EventEmitter {
                 this.emit('ready');
             }
         });
-        this.pckdir_watch.on('error', (err) => {
+        this.pckdirWatch.on('error', (err) => {
             logger.logError(`Package watcher error: ${err.message}`);
         });
 
         const settingsGlob = `${storage}/**/localdata/settings.json`;
-        this.settings_watch = chokidar.watch(settingsGlob, { depth: 2 });
-        this.settings_watch.on('change', (file_path) => {
-            let path_members = file_path.split('/');
-            let pckg_name = path_members[path_members.length - 3];
-            if (this.contains(pckg_name)) {
-                this.packages[pckg_name].restart('SIGINT');
+        this.settingsWatch = chokidar.watch(settingsGlob, { depth: 2 });
+        this.settingsWatch.on('change', (filePath) => {
+            let pathMembers = filePath.split('/');
+            let pckgName = pathMembers[pathMembers.length - 3];
+            if (this.contains(pckgName)) {
+                this.packages[pckgName].restart('SIGINT');
             }
         });
     }
 
-    async registerPackage(package_name: string) {
-        if (this.contains(package_name)) {
+    async registerPackage(packageName: string) {
+        if (this.contains(packageName)) {
             return;
         }
 
-        logger.logInfo(`Package added ${package_name}`);
-        const http_port = await getport({
+        logger.logInfo(`Package added ${packageName}`);
+        const httpPort = await getport({
             port: getport.makeRange(52521, 52570),
         });
-        const http_port_public = await getport({
+        const httpPortPublic = await getport({
             port: getport.makeRange(52571, 52620),
         });
-        this.packages[package_name] = new Package(`${this.storage}/${package_name}`, http_port, http_port_public);
+        this.packages[packageName] = new Package(`${this.storage}/${packageName}`, httpPort, httpPortPublic);
     }
 
-    unregisterPackage(package_name: string) {
-        if (!this.contains(package_name)) {
+    unregisterPackage(packageName: string) {
+        if (!this.contains(packageName)) {
             return;
         }
 
-        logger.logInfo(`Package removed ${package_name}`);
-        this.packages[package_name].stop();
-        delete this.packages[package_name];
+        logger.logInfo(`Package removed ${packageName}`);
+        this.packages[packageName].stop();
+        delete this.packages[packageName];
     }
 
-    async installPackage(tmp_package_path: string) {
-        if (fs.existsSync(tmp_package_path + '/manifest.json')) {
-            const raw_manifest = await fs.readFile(tmp_package_path + '/manifest.json');
-            const manifest = JSON.parse(raw_manifest.toString());
+    async installPackage(tmpPackagePath: string) {
+        if (fs.existsSync(tmpPackagePath + '/manifest.json')) {
+            const rawManifest = await fs.readFile(tmpPackagePath + '/manifest.json');
+            const manifest = JSON.parse(rawManifest.toString());
             if ('required_camscripter_rbi_version' in manifest) {
                 let version = manifest['required_camscripter_rbi_version'].split('.');
 
@@ -130,32 +130,32 @@ export class PackageManager extends EventEmitter {
 
             try {
                 this.lock();
-                this.pckdir_watch_pause = true;
+                this.pckdirWatchPause = true;
                 const name = manifest['package_name'];
                 logger.logInfo('Package Manager: Installing package ' + name);
 
                 logger.logInfo('npm install run');
                 cp.execSync('sudo npm install', {
-                    cwd: tmp_package_path,
+                    cwd: tmpPackagePath,
                 });
 
                 if (this.contains(name)) {
                     const pckgWasEnabled = this.packages[name].enabled;
                     this.unregisterPackage(name);
-                    await fs.copy(`${this.storage}/${name}/localdata`, `${tmp_package_path}/localdata`);
-                    await fs.move(`${tmp_package_path}`, `${this.storage}/${name}`, { overwrite: true });
+                    await fs.copy(`${this.storage}/${name}/localdata`, `${tmpPackagePath}/localdata`);
+                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${name}`, { overwrite: true });
                     await this.registerPackage(name);
                     if (pckgWasEnabled) {
                         this.packages[name].start();
                     }
                 } else {
-                    await fs.move(`${tmp_package_path}`, `${this.storage}/${name}`, { overwrite: true });
+                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${name}`, { overwrite: true });
                     await this.registerPackage(name);
                 }
             } catch (err) {
                 throw err;
             } finally {
-                this.pckdir_watch_pause = true;
+                this.pckdirWatchPause = true;
                 this.unlock();
             }
             return true;
@@ -166,12 +166,12 @@ export class PackageManager extends EventEmitter {
     }
 
     lock() {
-        this.lock_mode = true;
+        this.lockMode = true;
     }
     unlock() {
-        this.lock_mode = false;
-        if (this.directive_params) {
-            this.directive_params.refresh();
+        this.lockMode = false;
+        if (this.directiveParams) {
+            this.directiveParams.refresh();
         }
     }
 
@@ -186,10 +186,10 @@ export class PackageManager extends EventEmitter {
     }
 
     connect(params: ParamGroup) {
-        this.directive_params = params;
+        this.directiveParams = params;
 
-        this.directive_params.on('refresh', () => {
-            if (!this.lock_mode) {
+        this.directiveParams.on('refresh', () => {
+            if (!this.lockMode) {
                 logger.logInfo('Parameters applied!');
                 for (let name in this.packages) {
                     if (name in params.value && params.value[name].enabled) {
@@ -200,15 +200,23 @@ export class PackageManager extends EventEmitter {
                 }
             }
         });
-        this.directive_params.refresh();
+        this.directiveParams.refresh();
     }
 
     listManifests(): Manifest[] {
-        let list = [];
-        for (let p in this.packages) {
-            list.push(this.packages[p].readManifest());
+        let list: Manifest[] = [];
+        for (let pckgName in this.packages) {
+            list.push(this.packages[pckgName].readManifest());
         }
-        return list;
+        return list.sort((a, b) => {
+            if (a.package_menu_name < b.package_menu_name) {
+                return -1;
+            }
+            if (a.package_menu_name > b.package_menu_name) {
+                return 1;
+            }
+            return 0;
+        });
     }
 }
 
@@ -217,25 +225,24 @@ export class Package {
     storage: string;
     enabled: boolean;
     process: CamScripterMonitor;
-    env_vars: Enviroment;
-    constructor(storage: string, http_port: number, http_port_public: number) {
+    envVars: Enviroment;
+    constructor(storage: string, httpPort: number, httpPortPublic: number) {
         this.storage = storage;
         this.manifest = this.readManifest();
         this.enabled = false;
-        this.env_vars = {
-            http_port,
-            http_port_public,
-            install_path: this.storage,
-            persistent_data_path: this.storage + '/localdata/',
+        this.envVars = {
+            httpPort: httpPort,
+            httpPortPublic: httpPortPublic,
+            installPath: this.storage,
+            persistentDataPath: this.storage + '/localdata/',
         };
         if (!fs.pathExistsSync(`${this.storage}/localdata`)) {
             fs.mkdirSync(`${this.storage}/localdata`);
         }
         this.process = new CamScripterMonitor(this.storage + '/main.js', {
             cwd: this.storage,
-            log_path: this.storage + '/localdata/log.txt',
-            env: this.env_vars,
-            restart_delay: 5000,
+            logPath: this.storage + '/localdata/log.txt',
+            env: this.envVars,
         });
 
         this.process.on('start', () => {
@@ -250,37 +257,36 @@ export class Package {
     }
 
     readManifest(): Manifest {
-        let raw_manifest = fs.readFileSync(this.storage + '/manifest.json');
-        let manifest = JSON.parse(raw_manifest.toString());
+        let rawManifest = fs.readFileSync(this.storage + '/manifest.json');
+        let manifest = JSON.parse(rawManifest.toString());
         return manifest;
     }
 
-    accessOnlineFile(raw_path: string): [fs.Stats, fs.ReadStream] {
-        let file_path = this.storage + '/html/' + path.normalize(raw_path);
-        if (fs.pathExistsSync(file_path)) {
-            let stat = fs.statSync(file_path);
-            return [stat, fs.createReadStream(file_path)];
+    accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] {
+        let filePath = this.storage + '/html/' + path.normalize(rawPath);
+        if (fs.pathExistsSync(filePath)) {
+            let stat = fs.statSync(filePath);
+            return [stat, fs.createReadStream(filePath)];
         } else {
             return null;
         }
     }
 
-    accessLogFile(): [fs.Stats, fs.ReadStream] {
-        let file_path = this.storage + '/localdata/log.txt';
-        if (fs.pathExistsSync(file_path)) {
-            let stat = fs.statSync(file_path);
-            return [stat, fs.createReadStream(file_path)];
+    accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } {
+        let filePath = this.storage + '/localdata/log.txt';
+        if (fs.pathExistsSync(filePath)) {
+            let stat = fs.statSync(filePath);
+            return { stat, stream: fs.createReadStream(filePath, { end: stat.size }) };
         } else {
             return null;
         }
     }
 
     getSettings(): object {
-        let set_path = this.env_vars.persistent_data_path + 'settings.json';
-        if (fs.pathExistsSync(set_path)) {
+        const setPath = this.envVars.persistentDataPath + 'settings.json';
+        if (fs.pathExistsSync(setPath)) {
             try {
-                let json = fs.readJSONSync(set_path);
-                return json;
+                return fs.readJSONSync(setPath);
             } catch (err) {
                 logger.logError(err);
                 return {};
@@ -290,9 +296,9 @@ export class Package {
         }
     }
 
-    setSettings(json_obj: object): void {
-        let set_path = this.env_vars.persistent_data_path + 'settings.json';
-        fs.writeJsonSync(set_path, json_obj);
+    setSettings(jsonObj: object): void {
+        const setPath = this.envVars.persistentDataPath + 'settings.json';
+        fs.writeJsonSync(setPath, jsonObj);
     }
 
     start(): void {

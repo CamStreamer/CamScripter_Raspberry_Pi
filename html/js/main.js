@@ -1,27 +1,23 @@
-var app_name = 'CamScripter';
+let firstStart = true;
 
-var serverUrl = null;
-var defaultPage = 'settings.html';
-
-var firstStart = 1;
-
-$(document).ready(function () {
-  get_version();
+$(document).ready(() => {
+  getVersion();
   renderPackages();
 
-  // Upload packages
-  $('#fileUpload').on('click', function () {
-    upload_package_action();
+  // Upload package
+  $('#fileUpload').on('click', () => {
+    uploadPackageAction();
     return false;
   });
 
-  // Clear file input
-  $('#uploadManager').on('show.bs.modal', function () {
+  // Clear file input and alerts
+  $('#uploadManager').on('show.bs.modal', () => {
+    $('#uploadedFileHelp').text('').removeClass('alert alert-danger');
     $('#pkg_name').val('');
   });
 
-  var checkbox = $('#system_log_auto_reload');
-  $('#system_log_auto_reload_btn').on('click', function () {
+  const checkbox = $('#system_log_auto_reload');
+  $('#system_log_auto_reload_btn').on('click', () => {
     if (checkbox.is(':checked')) {
       checkbox.removeAttr("checked");
     } else {
@@ -30,20 +26,17 @@ $(document).ready(function () {
   });
 });
 
-// function - alert
-function make_alert(id, msg, type, alert_dismissible, close_button) {
-  var alert = "";
-  var targetDiv = (alert_dismissible === true) ? '#alert-div-fluid' : '#alert-div';
-  var exists = 0;
-  if ($(targetDiv).find('#' + id).length > 0) exists = 1;
-
-  if (!exists) { // if not exists in targetDiv create and append
+function makeAlert(id, msg, type, alertDismissible, closeButton) {
+  let alert = "";
+  let targetDiv = (alertDismissible === true) ? '#alert-div-fluid' : '#alert-div';
+  let exists = $(targetDiv).find('#' + id).length > 0;
+  if (!exists) { // If not exists in targetDiv create and append
     alert += '<div id="' + id + '" class="alert show hide alert-' + type;
-    if (alert_dismissible === true) {
+    if (alertDismissible === true) {
       alert += ' alert-dismissible';
     }
     alert += '" role="alert">' + msg;
-    if (close_button === true && alert_dismissible !== true) {
+    if (closeButton === true && alertDismissible !== true) {
       alert += '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
     }
     alert += '</div>';
@@ -51,81 +44,73 @@ function make_alert(id, msg, type, alert_dismissible, close_button) {
     $(targetDiv).append(alert);
   }
 
-  //alert dismissible
-  if (alert_dismissible === true) {
-    $('#' + id).fadeTo(5000, 500).slideUp(500, function () {
+  if (alertDismissible === true) {
+    $('#' + id).fadeTo(5000, 500).slideUp(500, () => {
       $('#' + id).alert('close');
     });
   }
 }
 
-// function - log error
-function log_error(message, status) {
-  console.log('Error: ' + message + '(' + status + ')');
+function logError(message, status) {
+  console.error('Error: ' + message + '(' + status + ')');
 }
 
-function escapeHtml(unsafe_html) {
-  return unsafe_html.replace(/&/g, "").replace(/</g, "").replace(/>/g, "").replace(/"/g, "").replace(/'/g, "");
+function escapeHtml(unsafeHtml) {
+  return unsafeHtml.replace(/&/g, "").replace(/</g, "").replace(/>/g, "").replace(/"/g, "").replace(/'/g, "");
 }
 
+function getSystemLog() {
+  $('#system_log_select').on('change', systemLogRefresh);
+  systemLogLoop();
+}
 
-function systemLogLoop(){
-  if ($('#system_log_auto_reload').is(':checked')) {
-    systemLogRefresh();
+async function systemLogLoop() {
+  try {
+    if ($('#system_log_auto_reload').is(':checked')) {
+      await systemLogRefresh();
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setTimeout(systemLogLoop, 5000);
   }
 }
 
 function systemLogRefresh() {
-  $('#system_log_loading').html(loadingSystemLogRender());
-    let package = $('#system_log_select').val();
+  return new Promise((resolve, reject) => {
+    $('#system_log_loading').html(loadingSystemLogRender());
+    const package = $('#system_log_select').val();
     $('#syslog_new_tab').attr('href', '/systemlog.cgi?package_name=' + package);
-    $.get({
-      url: '/systemlog.cgi?package_name=' + package,
-      success: function (response) {
-        data = response.split("\n");
-        var length = data.length;
-        var begin = length - 100;
-        if (begin < 0) {
-          begin = 0;
-        }
-        var output = "";
-        for (i = begin; i < length; i++) {
-          output += data[i] + "\n";
-        }
-        $('#system_log').text(output);
-      },
-      error: function (response) {
-        make_alert('get-system-log-error', response.message, 'error', true, true);
+    $.get('/systemlog.cgi?package_name=' + package).done((response) => {
+      data = response.split("\n");
+      const length = data.length;
+      let begin = length - 100;
+      if (begin < 0) {
+        begin = 0;
       }
-    }).done(function () {
+      let output = "";
+      for (i = begin; i < length; i++) {
+        output += data[i] + "\n";
+      }
+      $('#system_log').text(output);
+    }).always(() => {
       $('#system_log_loading').html("");
-      var element = $('#system_log_scroll');
+      const element = $('#system_log_scroll');
       element.scrollTop(element.prop("scrollHeight") - element.height());
-
+      resolve();
     });
+  });
 }
 
-// get system log
-function getSystemLog() {
-  $('#system_log_select').on('change', systemLogRefresh);
-  systemLogLoop();
-
-  setInterval(function () {
-    systemLogLoop();
-
-  }, 5000);
-
-}
-
-// function - validate upload package form
+// Validate upload package form
 function validateForm() {
-  err = 0;
-  var inputFileArr = $('#pkg_name')[0].files;
+  let err = 0;
+  const inputFileArr = $('#pkg_name')[0].files;
   if (inputFileArr.length == 0) {
     err = 2;
   }
-  for (var i = 0; i < inputFileArr.length; i++) {
-    var fileName = inputFileArr[i].name.toLowerCase();
+  for (let i = 0; i < inputFileArr.length; i++) {
+    const fileName = inputFileArr[i].name.toLowerCase();
     if (fileName.indexOf('.zip') === -1) {
       err = 1;
       break;
@@ -138,34 +123,29 @@ function validateForm() {
     $('#uploadedFileHelp').text('You must upload file *.zip.').addClass('alert alert-danger');
     return false;
   } else {
-    $('#uploadManager').modal('hide');
     $('#uploadedFileHelp').text('').removeClass('alert alert-danger');
   }
   return true;
 }
 
-// action - upload package
-function upload_package_action() {
+function uploadPackageAction() {
   if (validateForm()) {
-    var form = $('#uploadManagerForm')[0];
-    var name = $('#pkg_name')[0].files[0]["name"].split(".");
-    var formData = new FormData(form);
+    const form = $('#uploadManagerForm')[0];
+    const name = $('#pkg_name')[0].files[0]["name"].split(".");
+    const formData = new FormData(form);
+    $('#fileUpload').html('<span class="fas fa-circle-notch fa-spin mr-2"></span> Uploading');
     $.ajax({
       url: '/package/install.cgi',
       data: formData,
       type: 'POST',
       contentType: false,
       processData: false,
-      complete: function () {
-        getPackageList(); //render packages again
-      },
-      success: function (response) {
-        make_alert('new-package', 'New package <strong>' + name[0] + '</strong> was uploaded on camera.', 'info', true, true);
-      },
-      error: function (response) {
-        make_alert('new-package-error', 'Something went wrong with upload new package, please try again.', 'danger', true, true);
-        log_error(response.message, response.status);
-      }
+    }).done((response) => {
+      getPackageList();
+      $('#uploadManager').modal('hide');
+      makeAlert('new-package', 'New package <strong>' + name[0] + '</strong> was uploaded on camera.', 'info', true, true);
+    }).always(() => {
+      $('#fileUpload').html('Upload Package');
     });
     return false;
   }
@@ -174,25 +154,25 @@ function upload_package_action() {
 
 // List of all packages
 function renderPackages() {
-    getSystemLog()
-    if (firstStart == 0) {
-      getPackageList();
-    } else {
-      $('#content').html(loadingPageRender());
-      getPackageList();
-    }
+  getSystemLog()
+  if (!firstStart) {
+    getPackageList();
+  } else {
+    $('#content').html(loadingPageRender());
+    getPackageList();
+  }
 }
 
 function getParameter(paramList) {
-  var promise = new Promise(function(resolve, reject) {
-    $.get("/param.cgi?action=list&group=" + paramList, function(data) {
-      var params = {};
-      var lines = data.split('\n');
-      for (var i = 0; i < lines.length; i++) {
-        var pos = lines[i].indexOf('=');
+  return new Promise((resolve, reject) => {
+    $.get("/param.cgi?action=list&group=" + paramList, (data) => {
+      let params = {};
+      let lines = data.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const pos = lines[i].indexOf('=');
         if (pos != -1) {
-          var name = lines[i].substring(0, pos).trim().toLowerCase();
-          var value = lines[i].substring(pos + 1).trim();
+          const name = lines[i].substring(0, pos).trim().toLowerCase();
+          const value = lines[i].substring(pos + 1).trim();
           if (name.length && value.length) {
             params[name] = value;
           }
@@ -201,33 +181,31 @@ function getParameter(paramList) {
       resolve(params);
     });
   });
-  return promise;
 }
 
-function setParameter(app_name, paramName, value) {
-  var promise = new Promise(function(resolve, reject) {
-    var dataJson = {};
+function setParameter(appName, paramName, value) {
+  return new Promise((resolve, reject) => {
+    let dataJson = {};
     dataJson['action'] = 'update';
-    dataJson[app_name + '.' + paramName] = value;
+    dataJson[appName + '.' + paramName] = value;
 
     $.ajax({
       method: "POST",
       cache: true,
       url: "/param.cgi",
       data: dataJson
-    }).done(function(msg) {
+    }).done((msg) => {
       try {
         if (msg.trim().toLowerCase() == 'ok')
           resolve();
         else
           reject();
-      } catch(err) {
+      } catch (err) {
         reject();
       }
 
     });
   });
-  return promise;
 }
 
 function getPackageList() {
@@ -235,35 +213,32 @@ function getPackageList() {
     type: 'GET',
     url: '/package/list.cgi',
     dataType: 'json',
-    success: function (response) {
-      getParameter("camscripter.PackageConfigurations").then(function (data) {
-        var data = data["camscripter.packageconfigurations"];
-        if (data != undefined) {
-          dataJson = JSON.parse(data);
-
-        } else {
-          dataJson = {};
+    success: (response) => {
+      getParameter("camscripter.PackageConfigurations").then((paramData) => {
+        let packageConfigurations = {};
+        if (paramData["camscripter.packageconfigurations"] != undefined) {
+          packageConfigurations = JSON.parse(paramData["camscripter.packageconfigurations"]);
         }
-        listOfPackagesRender(response, dataJson);
+        listOfPackagesRender(response, packageConfigurations);
         let selected = $('#system_log_select').val();
         $('#system_log_select').html(listOfSyslogOptions(response, selected));
       });
     },
-    error: function (response) {
-      make_alert('package-list-error', 'Something went wrong with list all packages, please try again.', 'danger', true, true);
-      log_error(response.message, response.status);
+    error: (response) => {
+      makeAlert('package-list-error', 'Something went wrong with list all packages, please try again.', 'danger', true, true);
+      logError(response.message, response.status);
     }
   });
 }
 function listOfSyslogOptions(response, selected) {
-  var output = selected === 'system' ? '<option value="system" selected>System</option>' : '<option value="system">System</option>';
+  let output = selected === 'system' ? '<option value="system" selected>System</option>' : '<option value="system">System</option>';
   if (!response) {
     return output;
   } else {
-    for (var i = 0; i < response.length; i++) {
-      if (response[i].package_name === selected){
+    for (let i = 0; i < response.length; i++) {
+      if (response[i].package_name === selected) {
         output += `<option value=${response[i].package_name} selected>${response[i].package_menu_name}</option>`;
-      }else{
+      } else {
         output += `<option value=${response[i].package_name}>${response[i].package_menu_name}</option>`;
       }
     }
@@ -271,7 +246,7 @@ function listOfSyslogOptions(response, selected) {
   return output;
 }
 function loadingPageRender() {
-  var output = "";
+  let output = "";
   output += '<div class="card card-empty text-center" style="background-color: #F5F5F5;">';
   output += '<div class="card-body">';
   output += '<blockquote class="blockquote mb-0"><p><span class="fas fa-2x fa-circle-notch fa-spin text-primary"></span></p></blockquote>';
@@ -281,13 +256,13 @@ function loadingPageRender() {
 }
 
 function loadingSystemLogRender() {
-  var output = "";
+  let output = "";
   output += '<span class="h6 fas fa-circle-notch fa-spin text-primary"></span>';
   return output;
 }
 
 function emptyPageRender() {
-  var output = "";
+  let output = "";
   output += '<div class="card card-empty text-center">';
   output += '<div class="card-body">';
   output += '<blockquote class="blockquote mb-0"><p>No packages installed</p></blockquote>';
@@ -299,33 +274,37 @@ function emptyPageRender() {
 
 
 function listOfPackagesRender(response, dataJson) {
-  var output = "";
-  //make array of running packages
+  let output = "";
+  // Make array of running packages
   if (response.length == 0) {
     output = emptyPageRender();
   } else {
     output += '<div class="card-columns">';
-    for (var i = 0; i < response.length; i++) {
+    for (let i = 0; i < response.length; i++) {
       if (i % 3 === 0) {
         output += '</div>';
         output += '<div class="card-columns">';
       }
       output += '<div class="card">';
       output += '<div class="card-body">';
-      output += '<h5 class="text-left">' + response[i].package_menu_name;
+      output += '<h5 class="text-left">'
       if (dataJson[response[i].package_name] == undefined) {
-        output += '<span class="ml-4 mb-1 fas fa-circle text-secondary"></span>';
+        output += '<span data-toggle="tooltip" title="Stopped"><span class="mr-2 fas fa-circle text-secondary"></span></span>';
       } else {
-        output += '<span class="ml-4 mb-1 fas fa-circle text-primary"></span>';
+        output += '<span data-toggle="tooltip" title="Running"><span class="mr-2 fas fa-circle text-primary"></span></span>';
       }
-      if (dataJson[response[i].package_name] == undefined || response[i].ui_link == "") {
-      } else {
-        output += '<div style="float:right;" class="ml-auto btn-group border rounded"><button class="href-card btn btn-sm btn-light" data-href="' + response[i].ui_link + '"><span class="d-flex fas fa-cog"></span></button></div>';
+      output += response[i].package_menu_name;
+
+      if (dataJson[response[i].package_name] !== undefined && response[i].ui_link !== "") {
+        output += '<div style="float:right;" class="ml-auto btn-group border rounded">'
+        output += '<button class="href-card btn btn-sm btn-light" data-href="' + response[i].ui_link + '">'
+        output += '<span class="d-flex fas fa-cog"></span></button>'
+        output += '</div>';
       }
       output += '</h5>';
       output += '<div class="mt-4 d-flex">';
       output += '<div class="mr-auto">';
-      output += '<span class="mt-1 text-secondary">v ' + response[i].package_version + '</span>';
+      output += '<span class="mt-1 mb-1 badge badge-secondary">v ' + response[i].package_version + '</span>';
       output += '</div>';
       output += '<div class="ml-auto btn-group border rounded" role="group" aria-label="Options">';
       if (dataJson[response[i].package_name] == undefined) {
@@ -341,146 +320,128 @@ function listOfPackagesRender(response, dataJson) {
     }
     output += '</div>';
   }
-  //fill content with data
   $('#content').html(output);
 
-  //remove package action
-  remove_package_action();
+  removePackageAction();
 
-  //confirm delete package
-  confirm_delete_action();
+  confirmDeleteAction();
 
-  //link to UI action
-  link_to_ui_action();
+  linkToUiAction();
 
-  //start package action
-  start_package_action();
+  startPackageAction();
 
-  //stop package action
-  stop_package_action();
+  stopPackageAction();
 }
 
-// action - remove package
-function remove_package_action() {
-  $('.btn_remove_package').on('click', function () {
-    var remove_package_data = $(this).attr('data-remove-package');
+function removePackageAction() {
+  $('.btn_remove_package').on('click', (e) => {
+    const removePackageData = $(e.target).attr('data-remove-package');
     $('#confirmDelete').modal();
-    $('#confirmDeleteYes').attr('data-remove', remove_package_data);
-    $('#confirmDeleteText').html('Do you really want to uninstall the app <strong>' + remove_package_data + '</strong> ?');
+    $('#confirmDeleteYes').attr('data-remove', removePackageData);
+    $('#confirmDeleteText').html('Do you really want to uninstall the app <strong>' + removePackageData + '</strong> ?');
     return false;
   });
 }
 
-//action - confirm delete package
-function confirm_delete_action() {
+function confirmDeleteAction() {
   isRemoved = 0;
-  $('#confirmDeleteYes').on('click', function () {
+  $('#confirmDeleteYes').on('click', (e) => {
     if (isRemoved === 0) {
       isRemoved = 1;
-      var remove_package_data = $(this).attr('data-remove');
+      const removePackageData = $(e.target).attr('data-remove');
       $('#confirmDelete').modal('hide');
-      remove_package(remove_package_data);
-      stopRunningPackage(remove_package_data);
+      removePackage(removePackageData);
+      stopRunningPackage(removePackageData);
       getPackageList();
       return false;
     }
   });
 }
 
-// action - link to UI
-function link_to_ui_action() {
-  $('.href-card').on('click', function () {
-    var url = $(this).attr('data-href');
-    var win = window.open(url, '_blank');
+function linkToUiAction() {
+  $('.href-card').on('click', (e) => {
+    const url = $(e.target).closest('button').attr('data-href');
+    const win = window.open(url, '_blank');
     win.focus();
   });
 }
 
-// function - remove item from runnig packages
-function stopRunningPackage(package_name) {
-
-  getParameter('camscripter.packageconfigurations').then(function (data) {
-    var data = data["camscripter.packageconfigurations"];
-
-    if (data != undefined) {
-      dataJson = JSON.parse(data);
+function stopRunningPackage(packageName) {
+  getParameter('camscripter.packageconfigurations').then((paramData) => {
+    let packageConfigurations = {};
+    if (paramData["camscripter.packageconfigurations"] != undefined) {
+      packageConfigurations = JSON.parse(paramData["camscripter.packageconfigurations"]);
     }
-    if (dataJson[package_name] != undefined) {
-      //if package is included
-      delete dataJson[package_name];
+    if (packageConfigurations[packageName] != undefined) {
+      // if package is included
+      delete packageConfigurations[packageName];
     }
-    dataJson = JSON.stringify(dataJson);
-    setParameter('camscripter', 'PackageConfigurations', dataJson).then(function () {
+    const packageConfigurationsData = JSON.stringify(packageConfigurations);
+    setParameter('camscripter', 'PackageConfigurations', packageConfigurationsData).then(() => {
       getPackageList();
     });
   });
 }
 
-// function - add item to running packages
-function setRunningPackage(package_name) {
-
-  getParameter('camscripter.packageconfigurations').then(function (data) {
-    var data = data["camscripter.packageconfigurations"];
-    if (data != undefined) {
-      dataJson = JSON.parse(data);
+function setRunningPackage(packageName) {
+  getParameter('camscripter.packageconfigurations').then((paramData) => {
+    let packageConfigurations = {};
+    if (paramData["camscripter.packageconfigurations"] != undefined) {
+      packageConfigurations = JSON.parse(paramData["camscripter.packageconfigurations"]);
     }
-    if (dataJson[package_name] == undefined) {
+    if (packageConfigurations[packageName] == undefined) {
       // if package is not included
-      dataJson[package_name] = { "enabled": true };
+      packageConfigurations[packageName] = { "enabled": true };
     }
-
-    dataJson = JSON.stringify(dataJson);
-    setParameter('camscripter', 'packageconfigurations', dataJson).then(function () {
+    const packageConfigurationsData = JSON.stringify(packageConfigurations);
+    setParameter('camscripter', 'packageconfigurations', packageConfigurationsData).then(() => {
       getPackageList();
     });
   });
 }
 
-// action - start package
-function start_package_action() {
-  $('.startPackage').on('click', function (e) {
+function startPackageAction() {
+  $('.startPackage').on('click', (e) => {
     e.stopPropagation();
-    var package_name = $(this).attr('data-package');
-    setRunningPackage(package_name);
+    const packageName = $(e.target).attr('data-package');
+    setRunningPackage(packageName);
   });
 }
 
-// action - stop package
-function stop_package_action() {
-  $(".stopPackage").on('click', function (e) {
+function stopPackageAction() {
+  $(".stopPackage").on('click', (e) => {
     e.stopPropagation();
-    var package_name = $(this).attr('data-package');
-    stopRunningPackage(package_name);
+    const packageName = $(e.target).attr('data-package');
+    stopRunningPackage(packageName);
   });
 }
 
-// basic remove package function
-function remove_package(package_name) {
+function removePackage(packageName) {
   $.ajax({
     type: 'GET',
     url: '/package/remove.cgi',
-    data: { package_name: package_name },
-    success: function (response) {
-      make_alert('package-remove', 'Package <strong>' + package_name + '</strong> was removed from this device.', 'info', true, true);
+    data: { package_name: packageName },
+    success: (response) => {
+      makeAlert('package-remove', 'Package <strong>' + packageName + '</strong> was removed from this device.', 'info', true, true);
     },
-    error: function (response) {
-      make_alert('package-remove-error', 'Something went wrong with remove package, please try again.', 'danger', true, true);
-      log_error(response.message, response.status);
+    error: (response) => {
+      makeAlert('package-remove-error', 'Something went wrong with remove package, please try again.', 'danger', true, true);
+      logError(response.message, response.status);
     }
   });
 }
 
-function get_version(package_name) {
+function getVersion(packageName) {
   $.ajax({
     type: 'GET',
     url: '/version.cgi',
-    success: function (response) {
+    success: (response) => {
       $('#main_menu').html('<a id="cscrbi" class="active mr-2 nav-link btn-menu" href="/">CamScripter RPi\
         <span class="ml-2 badge badge-dark" style="font-size: 0.6rem;">' + response + '</span></a>')
     },
-    error: function (response) {
-      make_alert('package-remove-error', 'Something went wrong during version check, please try again.', 'danger', true, true);
-      log_error(response.message, response.status);
+    error: (response) => {
+      makeAlert('package-remove-error', 'Something went wrong during version check, please try again.', 'danger', true, true);
+      logError(response.message, response.status);
     }
   });
 }
