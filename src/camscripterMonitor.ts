@@ -6,7 +6,7 @@ import * as readline from 'readline';
 import { Duplex, Stream } from 'stream';
 
 import { Enviroment } from './commonData';
-import { logger } from './logger';
+import { CustomLogger, logger } from './logger';
 
 type MonitorOptions = {
     env: Enviroment;
@@ -97,8 +97,7 @@ export class CamScripterMonitor extends EventEmitter {
             output: process.stdout,
         });
         this.processLog.on('line', (line) => {
-            let date = new Date();
-            fs.appendFileSync(this.logPath, date.toISOString() + ': ' + line + '\n');
+            fs.appendFileSync(this.logPath, CustomLogger.getIsoLocalString() + ': ' + line + '\n');
         });
 
         this.processControl = cp.fork(this.path, {
