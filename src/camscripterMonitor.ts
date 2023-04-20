@@ -63,7 +63,7 @@ export class CamScripterMonitor extends EventEmitter {
             const currentProcess = this.processControl;
             setTimeout(() => {
                 this.brutalize(currentProcess);
-            }, 1500);
+            }, 10000);
         } else if (this.processControl && this.enabled) {
             clearTimeout(this.restartTimeout);
             this.enabled = false;
