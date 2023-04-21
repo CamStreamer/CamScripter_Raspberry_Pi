@@ -2,70 +2,85 @@ import * as fs from 'fs-extra';
 
 import { Paths } from './commonData';
 
-export enum LogPriority {
+export enum LogLevel {
     ERROR = 0,
-    WARNING = 1,
+    WARNING,
     INFO,
     DEBUG,
-    HTTP,
-    SILLY,
+    VERBOSE,
 }
 
-export class CustomLogger {
+export type LoggerOptions = {
     path: string;
-    level: LogPriority;
-    constructor(options) {
-        this.path = 'path' in options ? options.path : './systemlog.txt';
-        this.level = 'level' in options ? options.level : LogPriority.SILLY;
-        fs.writeFileSync(this.path, '');
-    }
+    level: LogLevel;
+    maxFileSizeBytes?: number;
+};
+
+export class CustomLogger {
+    private lastLogSizeCheck;
+
+    constructor(private options: LoggerOptions) {}
 
     logError(text: string): void {
-        if (this.level < LogPriority.ERROR) return;
+        if (this.options.level < LogLevel.ERROR) {
+            return;
+        }
         console.log(text);
-        this.log2Path(logger.path, text);
+        this.log2File(text);
     }
 
     logWarning(text: string): void {
-        if (this.level < LogPriority.WARNING) return;
+        if (this.options.level < LogLevel.WARNING) {
+            return;
+        }
         console.log(text);
-        this.log2Path(logger.path, text);
+        this.log2File(text);
     }
 
     logInfo(text: string): void {
-        if (this.level < LogPriority.INFO) return;
+        if (this.options.level < LogLevel.INFO) {
+            return;
+        }
         console.log(text);
-        this.log2Path(logger.path, text);
-    }
-
-    logHttp(text: string): void {
-        if (this.level < LogPriority.HTTP) return;
-        console.log(text);
-        this.log2Path(logger.path, text);
+        this.log2File(text);
     }
 
     logDebug(text: string): void {
-        if (this.level < LogPriority.DEBUG) return;
+        if (this.options.level < LogLevel.DEBUG) {
+            return;
+        }
 
         console.log(text);
-        this.log2Path(logger.path, text);
+        this.log2File(text);
     }
 
-    logSilly(text: string): void {
-        if (this.level < LogPriority.SILLY) return;
+    logVerbose(text: string): void {
+        if (this.options.level < LogLevel.VERBOSE) {
+            return;
+        }
         console.log(text);
-        this.log2Path(logger.path, text);
+        this.log2File(text);
     }
 
-    private log2Path(path: string, text: string): void {
+    private log2File(text: string): void {
         try {
-            fs.appendFileSync(path, CustomLogger.getIsoLocalString() + ': ' + text + '\n');
+            if (
+                this.options.maxFileSizeBytes &&
+                (this.lastLogSizeCheck === undefined || Date.now() - this.lastLogSizeCheck >= 3600 * 1000)
+            ) {
+                this.lastLogSizeCheck = Date.now();
+                const stat = fs.statSync(this.options.path, { throwIfNoEntry: false });
+                if (stat && stat.size > this.options.maxFileSizeBytes) {
+                    fs.truncateSync(this.options.path, this.options.maxFileSizeBytes);
+                }
+            }
+            fs.appendFileSync(this.options.path, this.getIsoLocalString() + ': ' + text + '\n');
         } catch (err) {
             console.log('Log Err: ' + err);
         }
     }
 
-    static getIsoLocalString() {
+    private getIsoLocalString() {
         const date = new Date();
         let isoLocalString = date
             .toLocaleString('sv', {
@@ -84,7 +99,8 @@ export class CustomLogger {
 
 const logger = new CustomLogger({
     path: Paths.SYSLOG,
-    level: LogPriority.HTTP,
+    level: LogLevel.DEBUG,
+    maxFileSizeBytes: 5 * 1024 * 1024,
 });
 
 export { logger };

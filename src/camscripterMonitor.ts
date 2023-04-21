@@ -1,14 +1,13 @@
 import * as cp from 'child_process';
 import { EventEmitter } from 'events';
 import { WriteStream } from 'fs';
-import * as fs from 'fs-extra';
 import * as readline from 'readline';
 import { Duplex, Stream } from 'stream';
 
 import { Enviroment } from './commonData';
-import { CustomLogger, logger } from './logger';
+import { CustomLogger, logger, LogLevel } from './logger';
 
-type MonitorOptions = {
+export type MonitorOptions = {
     env: Enviroment;
     cwd: string;
     spinTime?: number;
@@ -22,6 +21,7 @@ export class CamScripterMonitor extends EventEmitter {
     env: Enviroment;
     cwd: string;
     logPath: string;
+    processLogger: CustomLogger;
     processControl: cp.ChildProcess;
     processStream: Duplex;
     processLog: readline.ReadLine;
@@ -38,6 +38,11 @@ export class CamScripterMonitor extends EventEmitter {
         this.cwd = options.cwd;
         this.spinTime = options.spinTime;
         this.logPath = options.logPath;
+        this.processLogger = new CustomLogger({
+            path: options.logPath,
+            level: LogLevel.VERBOSE,
+            maxFileSizeBytes: 5 * 1024 * 1024,
+        });
     }
 
     start() {
@@ -97,7 +102,7 @@ export class CamScripterMonitor extends EventEmitter {
             output: process.stdout,
         });
         this.processLog.on('line', (line) => {
-            fs.appendFileSync(this.logPath, CustomLogger.getIsoLocalString() + ': ' + line + '\n');
+            this.processLogger.logInfo(line);
         });
 
         this.processControl = cp.fork(this.path, {
