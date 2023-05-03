@@ -50,6 +50,7 @@
         "get-port": "^5.1.1",
         "http": "0.0.1-security",
         "http-proxy": "^1.18.1",
+        "shelljs": "^0.8.5",
         "url": "^0.11.0",
         "ws": "^8.0.0",
         "yauzl": "^2.10.0"
