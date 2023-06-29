@@ -1,7 +1,7 @@
 import * as archiver from 'archiver';
 import { Fields, Files } from 'formidable';
 import * as fs from 'fs-extra';
-import { IncomingMessage, ServerResponse } from 'http';
+import { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'http';
 import * as http_proxy from 'http-proxy';
 import * as path from 'path';
 import * as yauzl from 'yauzl';
@@ -21,19 +21,27 @@ import { PackageManager } from './packageManager';
 import { ParamManager } from './paramManager';
 
 const extMap = {
-    '.ico': 'image/x-icon',
+    '.htm': 'text/html',
     '.html': 'text/html',
     '.js': 'text/javascript',
-    '.json': 'application/json',
     '.css': 'text/css',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
     '.wav': 'audio/wav',
     '.mp3': 'audio/mpeg',
+    '.ico': 'image/x-icon',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.bmp': 'image/bmp',
     '.svg': 'image/svg+xml',
+    '.tif': 'image/tiff',
+    '.tiff': 'image/tiff',
+    '.json': 'application/json',
     '.pdf': 'application/pdf',
     '.doc': 'application/msword',
+    '.otf': 'font/otf',
     '.ttf': 'font/sfnt',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
 };
 
 const pckgManager = new PackageManager(process.cwd() + '/packages', getVersion());
@@ -58,10 +66,13 @@ httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
                 let parsed = path.parse(filePath);
                 let read = pckgManager.packages[pckgName].accessOnlineFile(filePath);
                 if (read) {
-                    res.writeHead(ResponseCode.OK, {
-                        'Content-Type': extMap[parsed.ext],
+                    const headers: OutgoingHttpHeaders = {
                         'Content-Length': read[0].size,
-                    });
+                    };
+                    if (extMap[parsed.ext]) {
+                        headers['Content-Type'] = extMap[parsed.ext];
+                    }
+                    res.writeHead(ResponseCode.OK, headers);
                     read[1].pipe(res);
                 } else {
                     sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: file ${filePath} not found`);
