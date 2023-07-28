@@ -10,7 +10,7 @@ import { getVersion, Paths } from './commonData';
 import { HttpProxy, Target } from './httpProxy';
 import {
     ResponseCode,
-    sendArchiverResponse,
+    sendFileResponse,
     sendJsonResponse,
     sendMessageResponse,
     sendParamResponse,
@@ -87,15 +87,9 @@ httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
         if (req.url in aliases) {
             filePath = `./html${path.normalize(aliases[req.url])}`;
         }
-        let parsed = path.parse(filePath);
+        const parsed = path.parse(filePath);
         if (fs.pathExistsSync(filePath)) {
-            let stat = fs.statSync(filePath);
-            res.writeHead(ResponseCode.OK, {
-                'Content-Type': extMap[parsed.ext],
-                'Content-Length': stat.size,
-            });
-            let readStream = fs.createReadStream(filePath);
-            readStream.pipe(res);
+            sendFileResponse(res, ResponseCode.OK, extMap[parsed.ext], filePath);
         } else {
             sendMessageResponse(res, ResponseCode.NOT_FOUND, `HTTPApi: file ${filePath} not found`);
         }
@@ -261,48 +255,63 @@ httpServer.registerRequestCGI('/package/list.cgi', (url, req, res) => {
     }
 });
 
-httpServer.registerDataCGI('/package/ldata.cgi', async (url, req, res, files: Files, fields: Fields) => {
-    let pckgName = url.searchParams.get('package_name');
-    let action = url.searchParams.get('action');
-    let compressionLevel = parseInt(url.searchParams.get('compression_level'));
+httpServer.registerDataCGI('/package/data.cgi', async (url, req, res, files: Files, fields: Fields) => {
+    const pckgName = url.searchParams.get('package_name');
+    const action = url.searchParams.get('action');
+    const compressionLevel = parseInt(url.searchParams.get('compression_level'));
+
+    if (!(pckgName in pckgManager.packages)) {
+        sendMessageResponse(res, ResponseCode.BAD_REQ, `Package ${pckgName} doesn't exist`);
+        return;
+    }
+
+    const pckg = pckgManager.packages[pckgName];
+    const localdataPath = pckg.envVars.persistentDataPath;
     switch (action) {
         case 'IMPORT':
             let returnCode = ResponseCode.OK;
             let returnMessage = 'OK';
             for (let i in files) {
-                let name = path.parse(files[i]['name']);
-                let fpath = files[i]['path'];
-                if (name.ext === '.zip') {
-                    try {
-                        logger.logInfo('HTTPApi: localdata imported under name ' + name.base);
-                        const tmpPckgDir = process.cwd() + '/tmp_data/' + name.name;
+                const fileName = path.parse(files[i]['name']);
+                const filePath = files[i]['path'];
+                const tmpPckgDir = `${process.cwd()}/tmp_data/${fileName.name}`;
+                try {
+                    if (fileName.ext === '.zip') {
+                        logger.logInfo(`HTTPApi: localdata imported under name ${fileName.base}`);
                         await fs.remove(tmpPckgDir);
-                        await extractArchive(fpath, tmpPckgDir);
-                        let pckg = pckgManager.packages[pckgName];
-                        let localdataPath = pckg.envVars.persistentDataPath;
-                        fs.removeSync(localdataPath);
-                        fs.copySync(process.cwd() + '/tmp_data/' + name.name, localdataPath);
-                    } catch (err) {
-                        returnCode = ResponseCode.INTERNAL_ERROR;
-                        returnMessage = err;
-                    } finally {
-                        fs.removeSync(process.cwd() + '/tmp_data/' + name.name);
+                        await extractArchive(filePath, tmpPckgDir);
+                        await fs.remove(localdataPath);
+                        await fs.copy(tmpPckgDir, localdataPath);
+                        logger.logDebug(`Data imported for package ${pckgName}`);
+                    } else {
+                        logger.logWarning(
+                            'HTTPApi: package/data.cgi wrong extension recieved. Only zip archive is allowed.'
+                        );
                     }
-                } else {
-                    logger.logError('HTTPApi: wrong extention recieved ');
+                } catch (err) {
+                    returnCode = ResponseCode.INTERNAL_ERROR;
+                    returnMessage = err.message;
+                } finally {
+                    fs.remove(tmpPckgDir);
+                    fs.remove(filePath);
                 }
-                fs.removeSync(fpath);
             }
             sendMessageResponse(res, returnCode, returnMessage);
             break;
         case 'EXPORT':
-            let archie = archiver('zip', {
-                zlib: { level: compressionLevel },
+            const archie = archiver('zip', {
+                zlib: { level: compressionLevel || 9 },
             });
-            let pckg = pckgManager.packages[pckgName];
-            let localdataPath = pckg.envVars.persistentDataPath;
+            const zipFilePath = `${process.cwd()}/tmp/${pckgName}_localdata.zip`;
+            const output = fs.createWriteStream(zipFilePath);
+            output.on('close', async () => {
+                logger.logDebug(`Data archive for package ${pckgName} created: ${archie.pointer()}B`);
+                sendFileResponse(res, ResponseCode.OK, 'application/zip', zipFilePath);
+                await fs.remove(zipFilePath);
+            });
+            archie.pipe(output);
             archie.directory(localdataPath, false);
-            await sendArchiverResponse(res, ResponseCode.OK, archie);
+            await archie.finalize();
             break;
         default:
             sendMessageResponse(res, ResponseCode.BAD_REQ, 'Invalid action');
