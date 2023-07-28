@@ -50,6 +50,7 @@ const paramManager = new ParamManager(process.cwd() + '/params/');
 const httpServer = new HttpServer();
 const aliases = {
     '/': '/settings.html',
+    '/local/camscripter/settings.html': '/settings.html',
 };
 
 httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
