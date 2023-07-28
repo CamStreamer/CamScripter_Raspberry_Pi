@@ -4,16 +4,29 @@ $(document).ready(() => {
   getVersion();
   renderPackages();
 
-  // Upload package
-  $('#fileUpload').on('click', () => {
-    uploadPackageAction();
-    return false;
-  });
-
-  // Clear file input and alerts
   $('#uploadManager').on('show.bs.modal', () => {
+    // Clear file input and alerts
     $('#uploadedFileHelp').text('').removeClass('alert alert-danger');
     $('#pkg_name').val('');
+
+    // Upload package
+    $('#fileUpload').off().on('click', () => {
+      uploadPackageAction();
+      return false;
+    });
+  });
+
+  $('#importSettings').on('show.bs.modal', (e) => {
+    // Clear file input and alerts
+    $('#importSettingsHelp').text('').removeClass('alert alert-danger');
+    $('#settingsFile').val('');
+
+    // Import settings
+    const pckgName = $(e.relatedTarget).data('pckg-name');
+    $('#importSettingsBtn').off().on('click', () => {
+      importSettingsAction(pckgName);
+      return false;
+    });
   });
 
   const checkbox = $('#system_log_auto_reload');
@@ -102,8 +115,7 @@ function systemLogRefresh() {
   });
 }
 
-// Validate upload package form
-function validateForm() {
+function validateUploadPackageForm() {
   let err = 0;
   const inputFileArr = $('#pkg_name')[0].files;
   if (inputFileArr.length == 0) {
@@ -129,7 +141,7 @@ function validateForm() {
 }
 
 function uploadPackageAction() {
-  if (validateForm()) {
+  if (validateUploadPackageForm()) {
     const form = $('#uploadManagerForm')[0];
     const name = $('#pkg_name')[0].files[0]["name"].split(".");
     const formData = new FormData(form);
@@ -143,9 +155,46 @@ function uploadPackageAction() {
     }).done((response) => {
       getPackageList();
       $('#uploadManager').modal('hide');
-      makeAlert('new-package', 'New package <strong>' + name[0] + '</strong> was uploaded on camera.', 'info', true, true);
+      makeAlert('new-package', 'New package <strong>' + name[0] + '</strong> was uploaded.', 'info', true, true);
     }).always(() => {
       $('#fileUpload').html('Upload Package');
+    });
+    return false;
+  }
+  return false;
+}
+
+function validateImportSettingsForm() {
+  const inputFileArr = $('#settingsFile')[0].files;
+  if (inputFileArr.length == 0)
+  {
+    $('#importSettingsHelp').text('You must upload file *.zip.').addClass('alert alert-danger');
+    return false;
+  } else if ( inputFileArr[0].name.toLowerCase().indexOf('.zip') === -1) {
+    $('#importSettingsHelp').text('Only *.zip is allowed.').addClass('alert alert-danger');
+  } else {
+    $('#importSettingsHelp').text('').removeClass('alert alert-danger');
+  }
+  return true;
+}
+
+function importSettingsAction(packageName) {
+  if (validateImportSettingsForm()) {
+    const form = $('#importSettingsForm')[0];
+    const name = $('#settingsFile')[0].files[0]["name"].split(".");
+    const formData = new FormData(form);
+    $('#importSettingsBtn').html('<span class="fas fa-circle-notch fa-spin mr-2"></span> Importing');
+    $.ajax({
+      url: '/package/data.cgi?action=IMPORT&package_name=' + packageName,
+      data: formData,
+      type: 'POST',
+      contentType: false,
+      processData: false,
+    }).done((response) => {
+      $('#importSettings').modal('hide');
+      makeAlert('import-data', 'Setting file <strong>' + name[0] + '</strong> was imported.', 'info', true, true);
+    }).always(() => {
+      $('#importSettingsBtn').html('Import Settings');
     });
     return false;
   }
@@ -281,6 +330,7 @@ function listOfPackagesRender(response, dataJson) {
   } else {
     output += '<div class="card-columns">';
     for (let i = 0; i < response.length; i++) {
+      const exportUrl = '/package/data.cgi?action=EXPORT&package_name=' +  response[i].package_name;
       if (i % 3 === 0) {
         output += '</div>';
         output += '<div class="card-columns">';
@@ -294,25 +344,30 @@ function listOfPackagesRender(response, dataJson) {
         output += '<span data-toggle="tooltip" title="Running"><span class="mr-2 fas fa-circle text-primary"></span></span>';
       }
       output += response[i].package_menu_name;
-
-      if (dataJson[response[i].package_name] !== undefined && response[i].ui_link !== "") {
-        output += '<div style="float:right;" class="ml-auto btn-group border rounded">'
-        output += '<button class="href-card btn btn-sm btn-light" data-href="' + response[i].ui_link + '">'
-        output += '<span class="d-flex fas fa-cog"></span></button>'
-        output += '</div>';
-      }
+      output += '<div style="float:right;" class="ml-auto">'
+      output += '<button class="btn btn-sm btn-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+      output += '<span class="d-flex fas fa-ellipsis-v"></span></button>'
+      output += '<div class="dropdown-menu">'
+      output += '<a class="dropdown-item" href="' + exportUrl + '" download="' + response[i].package_name + '_settings.zip">Export Settings</a>'
+      output += '<a class="dropdown-item" href="#" data-toggle="modal" data-target="#importSettings" data-pckg-name="' + response[i].package_name + '">Import Settings</a>'
+      output += '<div class="dropdown-divider"></div>'
+      output += '<a class="dropdown-item btn_remove_package" href="#" data-remove-package="' + response[i].package_name + '">Uninstall</a>'
+      output += '</div>'
+      output += '</div>';
       output += '</h5>';
       output += '<div class="mt-4 d-flex">';
       output += '<div class="mr-auto">';
       output += '<span class="mt-1 mb-1 badge badge-secondary">v ' + response[i].package_version + '</span>';
       output += '</div>';
       output += '<div class="ml-auto btn-group border rounded" role="group" aria-label="Options">';
+      if (dataJson[response[i].package_name] !== undefined && response[i].ui_link !== "") {
+        output += '<button class="href-card btn btn-sm btn-primary" data-href="' + response[i].ui_link + '">Open</button>';
+      }
       if (dataJson[response[i].package_name] == undefined) {
         output += '<button class="startPackage btn btn-sm btn-light" data-package="' + response[i].package_name + '">Start</button>';
       } else {
         output += '<button class="stopPackage btn btn-sm btn-light" data-package="' + response[i].package_name + '">Stop</button>';
       }
-      output += '<button data-remove-package="' + response[i].package_name + '" class="btn btn-sm btn-light btn_remove_package">Uninstall</button>';
       output += '</div>';
       output += '</div>';
       output += '</div>';
@@ -324,7 +379,7 @@ function listOfPackagesRender(response, dataJson) {
 
   removePackageAction();
 
-  confirmDeleteAction();
+  confirmUninstallAction();
 
   linkToUiAction();
 
@@ -336,20 +391,20 @@ function listOfPackagesRender(response, dataJson) {
 function removePackageAction() {
   $('.btn_remove_package').on('click', (e) => {
     const removePackageData = $(e.target).attr('data-remove-package');
-    $('#confirmDelete').modal();
-    $('#confirmDeleteYes').attr('data-remove', removePackageData);
-    $('#confirmDeleteText').html('Do you really want to uninstall the app <strong>' + removePackageData + '</strong> ?');
+    $('#confirmUninstall').modal();
+    $('#confirmUninstallYes').attr('data-remove', removePackageData);
+    $('#confirmUninstallText').html('Do you really want to uninstall the app <strong>' + removePackageData + '</strong> ?');
     return false;
   });
 }
 
-function confirmDeleteAction() {
+function confirmUninstallAction() {
   isRemoved = 0;
-  $('#confirmDeleteYes').on('click', (e) => {
+  $('#confirmUninstallYes').on('click', (e) => {
     if (isRemoved === 0) {
       isRemoved = 1;
       const removePackageData = $(e.target).attr('data-remove');
-      $('#confirmDelete').modal('hide');
+      $('#confirmUninstall').modal('hide');
       removePackage(removePackageData);
       stopRunningPackage(removePackageData);
       getPackageList();
