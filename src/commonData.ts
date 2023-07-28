@@ -1,13 +1,13 @@
 import * as fs from 'fs-extra';
 
 export enum Paths {
-    SYSLOG = './systemlog.txt',
-    PACKAGE = './package.json',
+    SYSLOG = 'logs/systemlog.txt',
+    PACKAGE_JSON = 'package.json',
 }
 
 export function getVersion(): string[] {
-    if (fs.existsSync(Paths.PACKAGE)) {
-        let rawPckg = fs.readFileSync(Paths.PACKAGE);
+    if (fs.existsSync(Paths.PACKAGE_JSON)) {
+        let rawPckg = fs.readFileSync(Paths.PACKAGE_JSON);
         let pckg = JSON.parse(rawPckg.toString());
         return pckg['version'].split('.');
     }

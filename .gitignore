@@ -2,5 +2,6 @@ node_modules
 dist
 params
 packages
+logs
 systemlog.txt
 .npmrc

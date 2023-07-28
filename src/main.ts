@@ -44,8 +44,8 @@ const extMap = {
     '.woff2': 'font/woff2',
 };
 
-const pckgManager = new PackageManager(process.cwd() + '/packages', getVersion());
-const paramManager = new ParamManager(process.cwd() + '/params/');
+const pckgManager = new PackageManager(`${process.cwd()}/packages`, `${process.cwd()}/logs`, getVersion());
+const paramManager = new ParamManager(`${process.cwd()}/params`);
 
 const httpServer = new HttpServer();
 const aliases = {

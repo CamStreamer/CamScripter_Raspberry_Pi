@@ -46,7 +46,7 @@ export class ParamManager extends EventEmitter {
                 let parsed = path.parse(file);
                 if (parsed.ext === '.json') {
                     logger.logDebug('Param loaded: ' + parsed.name);
-                    this.params[parsed.name] = new ParamGroup(parsed.name, this.storage + file);
+                    this.params[parsed.name] = new ParamGroup(parsed.name, path.join(this.storage, file));
                 }
             });
             this.ready = true;
@@ -59,7 +59,7 @@ export class ParamManager extends EventEmitter {
             const configExitsts = await this.configurationExist('packageconfigurations');
             if (!configExitsts) {
                 logger.logDebug("Parameter packageconfigurations doesn't exist, creating default configuration.");
-                fs.writeFileSync(this.storage + 'packageconfigurations.json', '{}');
+                fs.writeFileSync(path.join(this.storage, 'packageconfigurations.json'), '{}');
             }
         } catch (err) {
             logger.logError(err.toString());
@@ -68,7 +68,7 @@ export class ParamManager extends EventEmitter {
 
     private configurationExist(paramName) {
         return new Promise<boolean>((resolve) => {
-            fs.access(this.storage + paramName + '.json', (err) => {
+            fs.access(path.join(this.storage, paramName + '.json'), (err) => {
                 if (err) {
                     resolve(false);
                 } else {
@@ -115,7 +115,7 @@ export class ParamGroup extends EventEmitter {
     refresh(): void {
         let rawJson = fs.readFileSync(this.fileName);
         this.value = JSON.parse(rawJson.toString());
-        logger.logDebug('Parameter ' + this.name + ' new value: ' + JSON.stringify(this.value));
+        logger.logDebug(`Parameter ${this.name} new value: ${JSON.stringify(this.value)}`);
         this.emit('refresh');
     }
 }

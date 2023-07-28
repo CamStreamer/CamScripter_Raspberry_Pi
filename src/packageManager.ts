@@ -18,6 +18,7 @@ type Manifest = {
 
 export class PackageManager extends EventEmitter {
     storage: string;
+    logsStorage: string;
     packages: Record<string, Package>;
     packagesRegisterPrms: Record<string, Promise<void>>;
     pckdirWatch: chokidar.FSWatcher;
@@ -28,10 +29,11 @@ export class PackageManager extends EventEmitter {
     lockMode: boolean;
     ready: boolean;
 
-    constructor(storage: string, version: string[]) {
+    constructor(storage: string, logsStorage: string, version: string[]) {
         super();
         this.lockMode = false;
         this.storage = storage;
+        this.logsStorage = logsStorage;
         this.packages = {};
         this.packagesRegisterPrms = {};
         this.pckdirWatchPause = false;
@@ -95,7 +97,12 @@ export class PackageManager extends EventEmitter {
         const httpPortPublic = await getport({
             port: getport.makeRange(52571, 52620),
         });
-        this.packages[packageName] = new Package(`${this.storage}/${packageName}`, httpPort, httpPortPublic);
+        this.packages[packageName] = new Package(
+            `${this.storage}/${packageName}`,
+            `${this.logsStorage}/${packageName}.txt`,
+            httpPort,
+            httpPortPublic
+        );
     }
 
     unregisterPackage(packageName: string) {
@@ -176,8 +183,8 @@ export class PackageManager extends EventEmitter {
     }
 
     uninstallPackage(name: string) {
-        let storage = `${this.storage}/${name}`;
-        fs.removeSync(storage);
+        fs.removeSync(`${this.storage}/${name}`);
+        fs.removeSync(`${this.logsStorage}/${name}.txt`);
         this.unregisterPackage(name);
     }
 
@@ -223,11 +230,13 @@ export class PackageManager extends EventEmitter {
 export class Package {
     manifest: Manifest;
     storage: string;
+    logPath: string;
     enabled: boolean;
     process: CamScripterMonitor;
     envVars: Enviroment;
-    constructor(storage: string, httpPort: number, httpPortPublic: number) {
+    constructor(storage: string, logPath: string, httpPort: number, httpPortPublic: number) {
         this.storage = storage;
+        this.logPath = logPath;
         this.manifest = this.readManifest();
         this.enabled = false;
         this.envVars = {
@@ -241,7 +250,7 @@ export class Package {
         }
         this.process = new CamScripterMonitor(this.storage + '/main.js', {
             cwd: this.storage,
-            logPath: this.storage + '/localdata/log.txt',
+            logPath: this.logPath,
             env: this.envVars,
         });
 
@@ -257,13 +266,13 @@ export class Package {
     }
 
     readManifest(): Manifest {
-        let rawManifest = fs.readFileSync(this.storage + '/manifest.json');
+        let rawManifest = fs.readFileSync(path.join(this.storage, 'manifest.json'));
         let manifest = JSON.parse(rawManifest.toString());
         return manifest;
     }
 
     accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] {
-        let filePath = this.storage + '/html/' + path.normalize(rawPath);
+        let filePath = path.join(this.storage, 'html', path.normalize(rawPath));
         if (fs.pathExistsSync(filePath)) {
             let stat = fs.statSync(filePath);
             return [stat, fs.createReadStream(filePath)];
@@ -273,10 +282,9 @@ export class Package {
     }
 
     accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } {
-        let filePath = this.storage + '/localdata/log.txt';
-        if (fs.pathExistsSync(filePath)) {
-            let stat = fs.statSync(filePath);
-            return { stat, stream: fs.createReadStream(filePath, { end: stat.size }) };
+        if (fs.pathExistsSync(this.logPath)) {
+            let stat = fs.statSync(this.logPath);
+            return { stat, stream: fs.createReadStream(this.logPath, { end: stat.size }) };
         } else {
             return null;
         }
