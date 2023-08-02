@@ -155,7 +155,12 @@ function uploadPackageAction() {
     }).done((response) => {
       getPackageList();
       $('#uploadManager').modal('hide');
-      makeAlert('new-package', 'New package <strong>' + name[0] + '</strong> was uploaded.', 'info', true, true);
+      makeAlert('new-package', 'New micro app <strong>' + name[0] + '</strong> was uploaded on the camera.', 'info', true, true);
+    }).fail(function (response) {
+      $('#uploadedFileHelp').html(
+        '<div class="alert alert-danger">Unable to upload file(s). Please try again.</div>'
+      );
+      logError(response.responseJSON.message, response.responseJSON.status);
     }).always(() => {
       $('#fileUpload').html('Upload Package');
     });
@@ -166,11 +171,10 @@ function uploadPackageAction() {
 
 function validateImportSettingsForm() {
   const inputFileArr = $('#settingsFile')[0].files;
-  if (inputFileArr.length == 0)
-  {
+  if (inputFileArr.length == 0) {
     $('#importSettingsHelp').text('You must upload file *.zip.').addClass('alert alert-danger');
     return false;
-  } else if ( inputFileArr[0].name.toLowerCase().indexOf('.zip') === -1) {
+  } else if (inputFileArr[0].name.toLowerCase().indexOf('.zip') === -1) {
     $('#importSettingsHelp').text('Only *.zip is allowed.').addClass('alert alert-danger');
   } else {
     $('#importSettingsHelp').text('').removeClass('alert alert-danger');
@@ -330,7 +334,7 @@ function listOfPackagesRender(response, dataJson) {
   } else {
     output += '<div class="card-columns">';
     for (let i = 0; i < response.length; i++) {
-      const exportUrl = '/package/data.cgi?action=EXPORT&package_name=' +  response[i].package_name;
+      const exportUrl = '/package/data.cgi?action=EXPORT&package_name=' + response[i].package_name;
       if (i % 3 === 0) {
         output += '</div>';
         output += '<div class="card-columns">';

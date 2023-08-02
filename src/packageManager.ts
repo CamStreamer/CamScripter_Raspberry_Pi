@@ -13,6 +13,7 @@ import { ParamGroup } from './paramManager';
 type Manifest = {
     package_name: string;
     package_menu_name: string;
+    required_camscripter_rbi_version: string;
     ui_link: string;
 };
 
@@ -118,14 +119,25 @@ export class PackageManager extends EventEmitter {
     async installPackage(tmpPackagePath: string) {
         if (fs.existsSync(tmpPackagePath + '/manifest.json')) {
             const rawManifest = await fs.readFile(tmpPackagePath + '/manifest.json');
-            const manifest = JSON.parse(rawManifest.toString());
-            if ('required_camscripter_rbi_version' in manifest) {
-                let version = manifest['required_camscripter_rbi_version'].split('.');
+            const manifest = JSON.parse(rawManifest.toString()) as Manifest;
+            logger.logInfo('Package Manager: Installing package ' + manifest.package_menu_name);
 
+            if (manifest.package_name.length === 0) {
+                throw new Error('Wrong manifest format: package name is empty.');
+            }
+            if (!/^[0-9a-zA-Z_-]+$/.test(manifest.package_name)) {
+                throw new Error(
+                    'Wrong manifest format: only alphabetic characters, underscore and coma are allowed in package name.'
+                );
+            }
+
+            if (manifest.required_camscripter_rbi_version) {
+                const version = manifest.required_camscripter_rbi_version.split('.');
                 if (version.length != this.version.length) {
-                    throw new Error('Wrong manifest format');
+                    throw new Error(
+                        'Wrong manifest format: invalid format of required_camscripter_rbi_version attribute.'
+                    );
                 }
-
                 for (let i = 0; i < this.version.length; i++) {
                     if (Number.parseInt(version[i]) > Number.parseInt(this.version[i])) {
                         throw new Error('Newer CSc-RBi version required');
@@ -138,26 +150,24 @@ export class PackageManager extends EventEmitter {
             try {
                 this.lock();
                 this.pckdirWatchPause = true;
-                const name = manifest['package_name'];
-                logger.logInfo('Package Manager: Installing package ' + name);
 
                 logger.logInfo('npm install run');
                 cp.execSync('sudo npm install', {
                     cwd: tmpPackagePath,
                 });
 
-                if (this.contains(name)) {
-                    const pckgWasEnabled = this.packages[name].enabled;
-                    this.unregisterPackage(name);
-                    await fs.copy(`${this.storage}/${name}/localdata`, `${tmpPackagePath}/localdata`);
-                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${name}`, { overwrite: true });
-                    await this.registerPackage(name);
+                if (this.contains(manifest.package_name)) {
+                    const pckgWasEnabled = this.packages[manifest.package_name].enabled;
+                    this.unregisterPackage(manifest.package_name);
+                    await fs.copy(`${this.storage}/${manifest.package_name}/localdata`, `${tmpPackagePath}/localdata`);
+                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${manifest.package_name}`, { overwrite: true });
+                    await this.registerPackage(manifest.package_name);
                     if (pckgWasEnabled) {
-                        this.packages[name].start();
+                        this.packages[manifest.package_name].start();
                     }
                 } else {
-                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${name}`, { overwrite: true });
-                    await this.registerPackage(name);
+                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${manifest.package_name}`, { overwrite: true });
+                    await this.registerPackage(manifest.package_name);
                 }
             } catch (err) {
                 throw err;
