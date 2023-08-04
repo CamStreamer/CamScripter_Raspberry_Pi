@@ -6,7 +6,7 @@
       var queryString = '';
       if (window.location.href.indexOf('?') !== -1)
         queryString = window.location.href.slice(window.location.href.indexOf('?'))
-      window.location.replace('/local/camscripter/#VERSION/settings.html' + queryString);
+      window.location.replace('/settings.html' + queryString);
     }
   </script>
 
@@ -25,11 +25,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
     <div class="navbar-header">
-    <a class="navbar-brand serverURL" target="_blank" href="https://camstreamer.com/"><img src="logo_CamStreamer.png" width="30" alt="Logo CamStreamer" /></a>
+    <a class="navbar-brand serverURL" target="_blank" href="https://camstreamer.com/"><img src="logo_CamStreamer.png" width="30" alt="Logo CamStreamer"></a>
     </div>
-    <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#navbarMainMenu" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
     <div class="collapse navbar-collapse" id="navbarMainMenu">
       <nav class="nav justify-content-center" id="main_menu"></nav>
     </div>
@@ -76,9 +73,7 @@
       </div>
     </div>
     <br>
-    <div id="content">
-
-    </div>
+    <div id="content"></div>
     <div class="alert alert-light mt-2">
       <small><span class="fas fa-info-circle mr-2"></span>Read <a href="https://github.com/CamStreamer/CamScripterApp_examples#camscripterapp_examples" target="_blank">here</a>
         how to create your own micro application for CamScripter App
@@ -92,17 +87,19 @@
     <div class="col">
       <div class="card" id="system_log_div">
         <div class="card-header">
-          <span class="h6 align-middle text-dark text-uppercase">System log
+          <span class="h6 align-middle text-dark text-uppercase">System log</span>
             <div class="float-right btn-group border rounded" role="group" aria-label="Basic example">
               <select name="syslog_select" id="system_log_select">
                 <option value="system" selected>System</option>
               </select>
-              <a href="#" class="btn btn-sm btn-light" id="system_log_auto_reload_btn"><input type="checkbox" name="auto_reload" id="system_log_auto_reload" checked /> Auto reload</a>
+              <div class="btn btn-sm btn-light" id="system_log_auto_reload_btn">
+                <input type="checkbox" name="auto_reload" id="system_log_auto_reload" checked> Auto reload
+              </div>
               <a target="_blank" href="/systemlog.cgi?package_name=system" id="syslog_new_tab" class="float-right btn btn-sm btn-light">
                 Open in new tab<span class="ml-2 fas fa-external-link-alt"></span>
-            </a>
+              </a>
             </div>
-            <span class="badge mr-1 float-right" style="padding-bottom: 0;padding-top: 8px;" id="system_log_loading"><span class="h6 fas fa-circle-notch fa-spin text-primary"></span></span></span>
+            <span class="badge mr-1 float-right" style="padding-bottom: 0;padding-top: 8px;" id="system_log_loading"><span class="h6 fas fa-circle-notch fa-spin text-primary"></span></span>
         </div>
         <div class="card-body" id="system_log_scroll">
           <pre id="system_log" style="word-wrap: break-word; white-space: pre-wrap;">
@@ -116,43 +113,43 @@
 
 <!-- /.container -->
 
-<!-- confirmDelete -->
-<div class="modal fade" id="confirmDelete" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+<!-- confirmUninstall -->
+<div class="modal fade" id="confirmUninstall" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
-        <h6 class="modal-title text-white">Confirm delete</h6>
+        <h6 class="modal-title text-white">Confirm Uninstall</h6>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <p id="confirmDeleteText"></p>
+        <p id="confirmUninstallText"></p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-link" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="confirmDeleteYes" data-remove="">Yes</button>
+        <button type="button" class="btn btn-primary" id="confirmUninstallYes" data-remove="">Yes</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- uploadManager -->
-<div class="modal fade" id="uploadManager" tabindex="-1" role="dialog" aria-labelledby="uploadManagerTitle" aria-hidden="true">
+<div class="modal fade" id="uploadManager" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
-        <h6 class="modal-title text-white" id="exampleModalCenterTitle">Upload Package</h6>
+        <h6 class="modal-title text-white">Upload Package</h6>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <form id="uploadManagerForm" class="form-horizontal has-validation-callback" action="" method="POST" enctype="multipart/form-data">
+      <form id="uploadManagerForm" class="form-horizontal has-validation-callback" method="POST" enctype="multipart/form-data">
       <div class="modal-body">
         <p id="uploadedFileHelp" class="help-block"></p>
         <div id="uploadedFileGroup" class="form-group">
           <label>File</label>
-          <input class="form-control" type="file" id="pkg_name" name="pkg_name" data-validation="required extension" data-validation-allowing="zip" />
+          <input class="form-control" type="file" id="pkg_name" name="pkg_name" data-validation="required extension" data-validation-allowing="zip">
         </div>
         <span class="small text-muted">Only ZIP file package is allowed.</span>
       </div>
@@ -166,8 +163,36 @@
   </div>
 </div>
 
+<!-- importSettings -->
+<div class="modal fade" id="importSettings" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">
+          <h6 class="modal-title text-white">Import Settings</h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form id="importSettingsForm" class="form-horizontal has-validation-callback" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+          <p id="importSettingsHelp" class="help-block"></p>
+          <div id="importSettingsGroup" class="form-group">
+            <label>File</label>
+            <input class="form-control" type="file" id="settingsFile" name="settingsFile" data-validation="required extension" data-validation-allowing="zip">
+          </div>
+          <span class="small text-muted">Only ZIP file package is allowed.</span>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link" data-dismiss="modal">Close</button>
+          <button id="importSettingsBtn" type="submit" class="btn btn-primary">Import Settings</button>
+        </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
 <!-- releaseNotesInfo -->
-<div class="modal fade" id="releaseNotesInfo" tabindex="-1" role="dialog" aria-labelledby="releaseNotesInfoTitle" aria-hidden="true">
+<div class="modal fade" id="releaseNotesInfo" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
       <div class="modal-header bg-dark" style="border-top-left-radius: 4px;border-top-right-radius: 4px;">

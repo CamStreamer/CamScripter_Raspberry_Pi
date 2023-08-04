@@ -85,6 +85,16 @@ a:hover {
   color: #00b6c0;
 }
 
+.btn-dropdown {
+  color: #212529;
+  background-color: transparent;
+}
+
+.btn-dropdown:hover {
+  color: #212529;
+  background-color: #e2e6ea;
+}
+
 .dropdown-item.active, .dropdown-item:active {
   background-color: #00b6c0;
 }

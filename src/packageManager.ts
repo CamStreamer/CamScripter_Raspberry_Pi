@@ -13,11 +13,13 @@ import { ParamGroup } from './paramManager';
 type Manifest = {
     package_name: string;
     package_menu_name: string;
+    required_camscripter_rbi_version: string;
     ui_link: string;
 };
 
 export class PackageManager extends EventEmitter {
     storage: string;
+    logsStorage: string;
     packages: Record<string, Package>;
     packagesRegisterPrms: Record<string, Promise<void>>;
     pckdirWatch: chokidar.FSWatcher;
@@ -28,10 +30,11 @@ export class PackageManager extends EventEmitter {
     lockMode: boolean;
     ready: boolean;
 
-    constructor(storage: string, version: string[]) {
+    constructor(storage: string, logsStorage: string, version: string[]) {
         super();
         this.lockMode = false;
         this.storage = storage;
+        this.logsStorage = logsStorage;
         this.packages = {};
         this.packagesRegisterPrms = {};
         this.pckdirWatchPause = false;
@@ -95,7 +98,12 @@ export class PackageManager extends EventEmitter {
         const httpPortPublic = await getport({
             port: getport.makeRange(52571, 52620),
         });
-        this.packages[packageName] = new Package(`${this.storage}/${packageName}`, httpPort, httpPortPublic);
+        this.packages[packageName] = new Package(
+            `${this.storage}/${packageName}`,
+            `${this.logsStorage}/${packageName}.txt`,
+            httpPort,
+            httpPortPublic
+        );
     }
 
     unregisterPackage(packageName: string) {
@@ -111,14 +119,25 @@ export class PackageManager extends EventEmitter {
     async installPackage(tmpPackagePath: string) {
         if (fs.existsSync(tmpPackagePath + '/manifest.json')) {
             const rawManifest = await fs.readFile(tmpPackagePath + '/manifest.json');
-            const manifest = JSON.parse(rawManifest.toString());
-            if ('required_camscripter_rbi_version' in manifest) {
-                let version = manifest['required_camscripter_rbi_version'].split('.');
+            const manifest = JSON.parse(rawManifest.toString()) as Manifest;
+            logger.logInfo('Package Manager: Installing package ' + manifest.package_menu_name);
 
+            if (manifest.package_name.length === 0) {
+                throw new Error('Wrong manifest format: package name is empty.');
+            }
+            if (!/^[0-9a-zA-Z_-]+$/.test(manifest.package_name)) {
+                throw new Error(
+                    'Wrong manifest format: only alphabetic characters, underscore and coma are allowed in package name.'
+                );
+            }
+
+            if (manifest.required_camscripter_rbi_version) {
+                const version = manifest.required_camscripter_rbi_version.split('.');
                 if (version.length != this.version.length) {
-                    throw new Error('Wrong manifest format');
+                    throw new Error(
+                        'Wrong manifest format: invalid format of required_camscripter_rbi_version attribute.'
+                    );
                 }
-
                 for (let i = 0; i < this.version.length; i++) {
                     if (Number.parseInt(version[i]) > Number.parseInt(this.version[i])) {
                         throw new Error('Newer CSc-RBi version required');
@@ -131,26 +150,24 @@ export class PackageManager extends EventEmitter {
             try {
                 this.lock();
                 this.pckdirWatchPause = true;
-                const name = manifest['package_name'];
-                logger.logInfo('Package Manager: Installing package ' + name);
 
                 logger.logInfo('npm install run');
                 cp.execSync('sudo npm install', {
                     cwd: tmpPackagePath,
                 });
 
-                if (this.contains(name)) {
-                    const pckgWasEnabled = this.packages[name].enabled;
-                    this.unregisterPackage(name);
-                    await fs.copy(`${this.storage}/${name}/localdata`, `${tmpPackagePath}/localdata`);
-                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${name}`, { overwrite: true });
-                    await this.registerPackage(name);
+                if (this.contains(manifest.package_name)) {
+                    const pckgWasEnabled = this.packages[manifest.package_name].enabled;
+                    this.unregisterPackage(manifest.package_name);
+                    await fs.copy(`${this.storage}/${manifest.package_name}/localdata`, `${tmpPackagePath}/localdata`);
+                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${manifest.package_name}`, { overwrite: true });
+                    await this.registerPackage(manifest.package_name);
                     if (pckgWasEnabled) {
-                        this.packages[name].start();
+                        this.packages[manifest.package_name].start();
                     }
                 } else {
-                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${name}`, { overwrite: true });
-                    await this.registerPackage(name);
+                    await fs.move(`${tmpPackagePath}`, `${this.storage}/${manifest.package_name}`, { overwrite: true });
+                    await this.registerPackage(manifest.package_name);
                 }
             } catch (err) {
                 throw err;
@@ -176,8 +193,8 @@ export class PackageManager extends EventEmitter {
     }
 
     uninstallPackage(name: string) {
-        let storage = `${this.storage}/${name}`;
-        fs.removeSync(storage);
+        fs.removeSync(`${this.storage}/${name}`);
+        fs.removeSync(`${this.logsStorage}/${name}.txt`);
         this.unregisterPackage(name);
     }
 
@@ -223,11 +240,13 @@ export class PackageManager extends EventEmitter {
 export class Package {
     manifest: Manifest;
     storage: string;
+    logPath: string;
     enabled: boolean;
     process: CamScripterMonitor;
     envVars: Enviroment;
-    constructor(storage: string, httpPort: number, httpPortPublic: number) {
+    constructor(storage: string, logPath: string, httpPort: number, httpPortPublic: number) {
         this.storage = storage;
+        this.logPath = logPath;
         this.manifest = this.readManifest();
         this.enabled = false;
         this.envVars = {
@@ -241,7 +260,7 @@ export class Package {
         }
         this.process = new CamScripterMonitor(this.storage + '/main.js', {
             cwd: this.storage,
-            logPath: this.storage + '/localdata/log.txt',
+            logPath: this.logPath,
             env: this.envVars,
         });
 
@@ -257,13 +276,13 @@ export class Package {
     }
 
     readManifest(): Manifest {
-        let rawManifest = fs.readFileSync(this.storage + '/manifest.json');
+        let rawManifest = fs.readFileSync(path.join(this.storage, 'manifest.json'));
         let manifest = JSON.parse(rawManifest.toString());
         return manifest;
     }
 
     accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] {
-        let filePath = this.storage + '/html/' + path.normalize(rawPath);
+        let filePath = path.join(this.storage, 'html', path.normalize(rawPath));
         if (fs.pathExistsSync(filePath)) {
             let stat = fs.statSync(filePath);
             return [stat, fs.createReadStream(filePath)];
@@ -273,10 +292,9 @@ export class Package {
     }
 
     accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } {
-        let filePath = this.storage + '/localdata/log.txt';
-        if (fs.pathExistsSync(filePath)) {
-            let stat = fs.statSync(filePath);
-            return { stat, stream: fs.createReadStream(filePath, { end: stat.size }) };
+        if (fs.pathExistsSync(this.logPath)) {
+            let stat = fs.statSync(this.logPath);
+            return { stat, stream: fs.createReadStream(this.logPath, { end: stat.size }) };
         } else {
             return null;
         }

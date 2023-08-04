@@ -1,6 +1,7 @@
 #!/bin/bash
 mkdir -p packages
 mkdir -p params
+mkdir -p logs
 mkdir -p tmp
 mkdir -p tmp_pckgs
 mkdir -p tmp_data

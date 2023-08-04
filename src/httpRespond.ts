@@ -1,4 +1,4 @@
-import { Archiver } from 'archiver';
+import * as fs from 'fs-extra';
 import { ServerResponse } from 'http';
 
 import { logger } from './logger';
@@ -43,10 +43,12 @@ export function sendParamResponse(res: ServerResponse, code: ResponseCode, param
     res.end(data);
 }
 
-export async function sendArchiverResponse(res: ServerResponse, code: ResponseCode, archive: Archiver) {
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Length', archive.pointer());
-    res.statusCode = code;
-    archive.pipe(res);
-    await archive.finalize();
+export function sendFileResponse(res: ServerResponse, code: ResponseCode, contentType: string, filePath: string) {
+    const stat = fs.statSync(filePath);
+    res.writeHead(code, {
+        'Content-Type': contentType,
+        'Content-Length': stat.size,
+    });
+    const readStream = fs.createReadStream(filePath);
+    readStream.pipe(res);
 }
