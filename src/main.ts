@@ -50,11 +50,10 @@ const paramManager = new ParamManager(`${process.cwd()}/params`);
 const httpServer = new HttpServer();
 const aliases = {
     '/': '/settings.html',
-    '/local/camscripter/settings.html': '/settings.html',
 };
 
 httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
-    if (req.url.match(/package/)) {
+    if (req.url.match(/\/package\//)) {
         let startIndex = req.url.search(/package/);
         let url = req.url.slice(startIndex);
         let folders = url.split('/');
@@ -86,7 +85,10 @@ httpServer.on('filerequest', (req: IncomingMessage, res: ServerResponse) => {
         let filePath = `./html${path.normalize(req.url)}`;
         if (req.url in aliases) {
             filePath = `./html${path.normalize(aliases[req.url])}`;
+        } else if (req.url.indexOf('/camscripter/') !== -1) {
+            filePath = `./html${path.normalize(req.url.substring(req.url.indexOf('/camscripter/') + 12))}`;
         }
+
         const parsed = path.parse(filePath);
         if (fs.pathExistsSync(filePath)) {
             sendFileResponse(res, ResponseCode.OK, extMap[parsed.ext], filePath);

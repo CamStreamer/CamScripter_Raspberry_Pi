@@ -36,8 +36,8 @@ export class HttpServer extends EventEmitter {
 
         this.server.on('request', (req: IncomingMessage, res: ServerResponse) => {
             logger.logInfo('Http-Server: Incomming request ' + req.url);
-            let url = new URL(req.url, this.serverOrigin);
-            let ext = path.parse(url.pathname).ext;
+            const url = new URL(req.url, this.serverOrigin);
+            const ext = path.parse(url.pathname).ext;
             if (url.pathname.match(/\/proxy\//)) {
                 this.emit('proxy', req, res, false);
             } else if (url.pathname.match(/\/proxy_public\//)) {
@@ -51,7 +51,7 @@ export class HttpServer extends EventEmitter {
     }
 
     private handleCGI(req: IncomingMessage, res: ServerResponse) {
-        let url = new URL(req.url, this.serverOrigin);
+        const url = new URL(req.url, this.serverOrigin);
         logger.logVerbose('Http-Server: CGI Request' + req.url);
         let matched = false;
         for (let cgiUrl of this.dataHandlesList) {
