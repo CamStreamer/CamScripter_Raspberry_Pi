@@ -94,7 +94,7 @@ function systemLogRefresh() {
     $('#system_log_loading').html(loadingSystemLogRender());
     const package = $('#system_log_select').val();
     $('#syslog_new_tab').attr('href', '/systemlog.cgi?package_name=' + package);
-    $.get('/systemlog.cgi?package_name=' + package).done((response) => {
+    $.get('systemlog.cgi?package_name=' + package).done((response) => {
       data = response.split("\n");
       const length = data.length;
       let begin = length - 100;
@@ -218,7 +218,7 @@ function renderPackages() {
 
 function getParameter(paramList) {
   return new Promise((resolve, reject) => {
-    $.get("/param.cgi?action=list&group=" + paramList, (data) => {
+    $.get("param.cgi?action=list&group=" + paramList, (data) => {
       let params = {};
       let lines = data.split('\n');
       for (let i = 0; i < lines.length; i++) {
