@@ -80,11 +80,11 @@ export class HttpServer extends EventEmitter {
         }
     }
 
-    start(port: number): void {
+    start(host: string, port: number): void {
         if (!this.running) {
             this.running = true;
-            this.server.listen(port, '0.0.0.0');
-            this.serverOrigin = 'http://0.0.0.0:' + port;
+            this.server.listen(port, host);
+            this.serverOrigin = `http://${host}:${port}`;
         }
     }
 

@@ -449,7 +449,9 @@ async function marry(pckgManager: PackageManager, paramManager: ParamManager) {
     if (pckgManager.ready && paramManager.ready) {
         pckgManager.connect(paramManager.params['packageconfigurations']);
         logger.logInfo('Starting Camscripter Server');
-        httpServer.start(52520);
-        logger.logInfo('Camscripter listening on 0.0.0.0:52520');
+        const host = process.argv.length > 2 ? process.argv[2] : '0.0.0.0';
+        const port = process.argv.length > 3 ? parseInt(process.argv[3]) : 52520;
+        httpServer.start(host, port);
+        logger.logInfo(`Camscripter listening on ${host}:${port}`);
     }
 }
