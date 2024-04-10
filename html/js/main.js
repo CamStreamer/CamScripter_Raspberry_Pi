@@ -147,7 +147,7 @@ function uploadPackageAction() {
     const formData = new FormData(form);
     $('#fileUpload').html('<span class="fas fa-circle-notch fa-spin mr-2"></span> Uploading');
     $.ajax({
-      url: '/package/install.cgi',
+      url: 'package/install.cgi',
       data: formData,
       type: 'POST',
       contentType: false,
@@ -189,7 +189,7 @@ function importSettingsAction(packageName) {
     const formData = new FormData(form);
     $('#importSettingsBtn').html('<span class="fas fa-circle-notch fa-spin mr-2"></span> Importing');
     $.ajax({
-      url: '/package/data.cgi?action=IMPORT&package_name=' + packageName,
+      url: 'package/data.cgi?action=IMPORT&package_name=' + packageName,
       data: formData,
       type: 'POST',
       contentType: false,
@@ -245,7 +245,7 @@ function setParameter(appName, paramName, value) {
     $.ajax({
       method: "POST",
       cache: true,
-      url: "/param.cgi",
+      url: "param.cgi",
       data: dataJson
     }).done((msg) => {
       try {
@@ -264,7 +264,7 @@ function setParameter(appName, paramName, value) {
 function getPackageList() {
   $.ajax({
     type: 'GET',
-    url: '/package/list.cgi',
+    url: 'package/list.cgi',
     dataType: 'json',
     success: (response) => {
       getParameter("camscripter.PackageConfigurations").then((paramData) => {
@@ -478,7 +478,7 @@ function stopPackageAction() {
 function removePackage(packageName) {
   $.ajax({
     type: 'GET',
-    url: '/package/remove.cgi',
+    url: 'package/remove.cgi',
     data: { package_name: packageName },
     success: (response) => {
       makeAlert('package-remove', 'Package <strong>' + packageName + '</strong> was removed from this device.', 'info', true, true);
@@ -493,7 +493,7 @@ function removePackage(packageName) {
 function getVersion(packageName) {
   $.ajax({
     type: 'GET',
-    url: '/version.cgi',
+    url: 'version.cgi',
     success: (response) => {
       $('#main_menu').html('<a id="cscrbi" class="active mr-2 nav-link btn-menu" href="/">CamScripter RPi\
         <span class="ml-2 badge badge-dark" style="font-size: 0.6rem;">' + response + '</span></a>')
