@@ -18,9 +18,9 @@
         }
     },
     "bin": {
-        "camscripter-register": "./bin/register.js",
-        "camscripter-unregister": "./bin/unregister.js",
-        "camscripter-run": "./bin/run.js"
+        "camscripter-register": "bin/register.js",
+        "camscripter-unregister": "bin/unregister.js",
+        "camscripter-run": "bin/run.js"
     },
     "main": "dist/main.js",
     "scripts": {

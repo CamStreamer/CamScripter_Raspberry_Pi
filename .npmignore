@@ -1,3 +1,9 @@
-params
+.github
+logs
 packages
-systemlog.txt
+params
+src
+tmp
+tmp_pckgs
+tmp_data
+tsconfig.json
