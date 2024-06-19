@@ -93,7 +93,7 @@ function systemLogRefresh() {
   return new Promise((resolve, reject) => {
     $('#system_log_loading').html(loadingSystemLogRender());
     const package = $('#system_log_select').val();
-    $('#syslog_new_tab').attr('href', '/systemlog.cgi?package_name=' + package);
+    $('#syslog_new_tab').attr('href', 'systemlog.cgi?package_name=' + package);
     $.get('systemlog.cgi?package_name=' + package).done((response) => {
       data = response.split("\n");
       const length = data.length;
@@ -334,7 +334,7 @@ function listOfPackagesRender(response, dataJson) {
   } else {
     output += '<div class="card-columns">';
     for (let i = 0; i < response.length; i++) {
-      const exportUrl = '/package/data.cgi?action=EXPORT&package_name=' + response[i].package_name;
+      const exportUrl = 'package/data.cgi?action=EXPORT&package_name=' + response[i].package_name;
       if (i % 3 === 0) {
         output += '</div>';
         output += '<div class="card-columns">';
