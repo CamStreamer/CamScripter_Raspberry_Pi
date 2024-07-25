@@ -50,7 +50,7 @@ export class HttpProxy {
                 host: target.host,
                 port: target.port,
                 path: target.path,
-                auth: encodeURIComponent(target.username) + ':' + encodeURIComponent(target.password),
+                auth: target.username + ':' + target.password,
                 timeout: 10000,
                 headers: req.headers,
                 rejectUnauthorized: target.protocol === 'https',
