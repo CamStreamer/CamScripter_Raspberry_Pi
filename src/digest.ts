@@ -2,7 +2,7 @@ import * as crypto from 'crypto';
 
 export class Digest {
     static getAuthHeader(user: string, pass: string, method: string, uri: string, wwwAuthenticateHeader: string) {
-        const digestItems = {};
+        const digestItems: Record<string, string> = {};
         const digestArr = wwwAuthenticateHeader.substring(wwwAuthenticateHeader.indexOf('Digest') + 6).split(',');
 
         for (let i = 0; i < digestArr.length; i++) {

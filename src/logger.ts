@@ -16,8 +16,16 @@ export type LoggerOptions = {
     maxFileSizeBytes?: number;
 };
 
+export function errToString(err: unknown) {
+    if (err instanceof Error) {
+        return err.stack ?? err.toString();
+    } else {
+        return 'Unknown error';
+    }
+}
+
 export class CustomLogger {
-    private lastLogSizeCheck;
+    private lastLogSizeCheck?: number;
 
     constructor(private options: LoggerOptions) {}
 

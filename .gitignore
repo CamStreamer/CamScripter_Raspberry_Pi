@@ -3,7 +3,6 @@ logs
 node_modules
 packages
 params
-src
 tmp
 tmp_pckgs
 tmp_data

@@ -7,7 +7,7 @@ import * as path from 'path';
 
 import { CamScripterMonitor } from './camscripterMonitor';
 import { Enviroment } from './commonData';
-import { logger } from './logger';
+import { errToString, logger } from './logger';
 import { ParamGroup } from './paramManager';
 
 type Manifest = {
@@ -18,17 +18,17 @@ type Manifest = {
 };
 
 export class PackageManager extends EventEmitter {
-    storage: string;
-    logsStorage: string;
-    packages: Record<string, Package>;
-    packagesRegisterPrms: Record<string, Promise<void>>;
-    pckdirWatch: chokidar.FSWatcher;
-    pckdirWatchPause: boolean;
-    settingsWatch: chokidar.FSWatcher;
-    directiveParams: ParamGroup;
-    version: string[];
-    lockMode: boolean;
-    ready: boolean;
+    private storage: string;
+    private logsStorage: string;
+    private packages: Record<string, Package>;
+    private packagesRegisterPrms: Record<string, Promise<void>>;
+    private pckdirWatch: chokidar.FSWatcher;
+    private pckdirWatchPause: boolean;
+    private settingsWatch: chokidar.FSWatcher;
+    private directiveParams?: ParamGroup;
+    private version: string[];
+    private lockMode: boolean;
+    private ready: boolean;
 
     constructor(storage: string, logsStorage: string, version: string[]) {
         super();
@@ -65,7 +65,7 @@ export class PackageManager extends EventEmitter {
                     logger.logInfo('Package ready ' + name);
                 }
             } catch (err) {
-                logger.logError(`Package initialization error: ${err.message}`);
+                logger.logError(`Package initialization error: ${errToString(err)}`);
             } finally {
                 this.ready = true;
                 this.emit('ready');
@@ -84,6 +84,14 @@ export class PackageManager extends EventEmitter {
                 this.packages[pckgName].restart('SIGINT');
             }
         });
+    }
+
+    isReady() {
+        return this.ready;
+    }
+
+    getPackages() {
+        return this.packages;
     }
 
     async registerPackage(packageName: string) {
@@ -187,9 +195,7 @@ export class PackageManager extends EventEmitter {
     }
     unlock() {
         this.lockMode = false;
-        if (this.directiveParams) {
-            this.directiveParams.refresh();
-        }
+        this.directiveParams?.refresh();
     }
 
     uninstallPackage(name: string) {
@@ -209,7 +215,7 @@ export class PackageManager extends EventEmitter {
             if (!this.lockMode) {
                 logger.logInfo('Parameters applied!');
                 for (let name in this.packages) {
-                    if (name in params.value && params.value[name].enabled) {
+                    if (params.value.hasOwnProperty(name) && params.value[name].enabled) {
                         this.packages[name].start();
                     } else {
                         this.packages[name].stop();
@@ -281,23 +287,21 @@ export class Package {
         return manifest;
     }
 
-    accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] {
+    accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] | undefined {
         let filePath = path.join(this.storage, 'html', path.normalize(rawPath));
         if (fs.pathExistsSync(filePath)) {
             let stat = fs.statSync(filePath);
             return [stat, fs.createReadStream(filePath)];
-        } else {
-            return null;
         }
+        return undefined;
     }
 
-    accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } {
+    accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } | undefined {
         if (fs.pathExistsSync(this.logPath)) {
             let stat = fs.statSync(this.logPath);
             return { stat, stream: fs.createReadStream(this.logPath, { end: stat.size }) };
-        } else {
-            return null;
         }
+        return undefined;
     }
 
     getSettings(): object {
@@ -306,7 +310,7 @@ export class Package {
             try {
                 return fs.readJSONSync(setPath);
             } catch (err) {
-                logger.logError(err);
+                logger.logError(errToString(err));
                 return {};
             }
         } else {

@@ -2,6 +2,7 @@ import * as http from 'http';
 import * as https from 'https';
 
 import { Digest } from './digest';
+import { errToString } from './logger';
 
 export type Target = {
     protocol: string;
@@ -27,7 +28,7 @@ export class HttpProxy {
                 proxyRes.statusCode = 400; // Avoid authorization window in browser
             }
 
-            res.writeHead(proxyRes.statusCode, proxyRes.headers);
+            res.writeHead(proxyRes.statusCode ?? 500, proxyRes.headers);
             proxyRes.on('data', (chunk) => {
                 res.write(chunk);
             });
@@ -35,16 +36,17 @@ export class HttpProxy {
                 res.end();
             });
         } catch (err) {
+            const body = errToString(err);
             res.writeHead(500, {
-                'Content-Length': Buffer.byteLength(err.stack ?? err.toString()),
+                'Content-Length': Buffer.byteLength(body),
                 'Content-Type': 'text/plain',
-            }).end(err.stack ?? err.toString());
+            }).end(body);
         }
     }
 
     private async sendProxyRequest(target: Target, req: http.IncomingMessage, digestHeader?: string) {
         return new Promise<http.IncomingMessage>((resolve, reject) => {
-            const options = {
+            const options: https.RequestOptions = {
                 method: req.method,
                 protocol: target.protocol === 'http' ? 'http:' : 'https:',
                 host: target.host,
@@ -55,7 +57,12 @@ export class HttpProxy {
                 headers: req.headers,
                 rejectUnauthorized: target.protocol === 'https',
             };
-            if (digestHeader !== undefined) {
+            if (
+                digestHeader !== undefined &&
+                options.method !== undefined &&
+                options.path !== undefined &&
+                options.path !== null
+            ) {
                 delete options.auth;
                 options.headers ??= {};
 

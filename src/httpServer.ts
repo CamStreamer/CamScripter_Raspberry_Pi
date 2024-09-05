@@ -15,14 +15,13 @@ type DataHandle = {
 };
 
 export class HttpServer extends EventEmitter {
-    server: Server;
-    running: boolean;
-    requestHandles: { [key: string]: RequestHandle };
-    requestHandlesList: string[];
-    dataHandles: { [key: string]: DataHandle };
-    dataHandlesList: string[];
-    extMap: { [key: string]: string };
-    serverOrigin: string;
+    private server: Server;
+    private running: boolean;
+    private requestHandles: { [key: string]: RequestHandle };
+    private requestHandlesList: string[];
+    private dataHandles: { [key: string]: DataHandle };
+    private dataHandlesList: string[];
+    private serverOrigin: string;
 
     constructor() {
         super();
@@ -36,7 +35,7 @@ export class HttpServer extends EventEmitter {
 
         this.server.on('request', (req: IncomingMessage, res: ServerResponse) => {
             logger.logInfo('Http-Server: Incomming request ' + req.url);
-            const url = new URL(req.url, this.serverOrigin);
+            const url = new URL(req.url ?? '', this.serverOrigin);
             const ext = path.parse(url.pathname).ext;
             if (url.pathname.match(/\/proxy\//)) {
                 this.emit('proxy', req, res, false);
@@ -50,8 +49,25 @@ export class HttpServer extends EventEmitter {
         });
     }
 
+    start(host: string, port: number): void {
+        if (!this.running) {
+            this.running = true;
+            this.server.listen(port, host);
+            this.serverOrigin = `http://${host}:${port}`;
+        }
+    }
+
+    registerRequestCGI(path: string, handle: RequestHandle): void {
+        this.requestHandlesList.push(path);
+        this.requestHandles[path] = handle;
+    }
+    registerDataCGI(path: string, handle: DataHandle): void {
+        this.dataHandlesList.push(path);
+        this.dataHandles[path] = handle;
+    }
+
     private handleCGI(req: IncomingMessage, res: ServerResponse) {
-        const url = new URL(req.url, this.serverOrigin);
+        const url = new URL(req.url ?? '', this.serverOrigin);
         logger.logVerbose('Http-Server: CGI Request' + req.url);
         let matched = false;
         for (let cgiUrl of this.dataHandlesList) {
@@ -78,22 +94,5 @@ export class HttpServer extends EventEmitter {
             logger.logWarning('Http-Server: No valid CGI');
             res.end('CGI ' + url.pathname + " can't be resolved");
         }
-    }
-
-    start(host: string, port: number): void {
-        if (!this.running) {
-            this.running = true;
-            this.server.listen(port, host);
-            this.serverOrigin = `http://${host}:${port}`;
-        }
-    }
-
-    registerRequestCGI(path: string, handle: RequestHandle): void {
-        this.requestHandlesList.push(path);
-        this.requestHandles[path] = handle;
-    }
-    registerDataCGI(path: string, handle: DataHandle): void {
-        this.dataHandlesList.push(path);
-        this.dataHandles[path] = handle;
     }
 }

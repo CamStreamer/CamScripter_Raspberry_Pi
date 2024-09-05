@@ -3,20 +3,29 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { logger } from './logger';
+import { errToString, logger } from './logger';
 
 export class ParamManager extends EventEmitter {
-    storage: string;
-    params: { [key: string]: ParamGroup };
-    watchDog: chokidar.FSWatcher;
-    ready: boolean;
+    private storage: string;
+    private ready: boolean;
+    private params: { [key: string]: ParamGroup };
+    private watchDog!: chokidar.FSWatcher;
+
     constructor(folder: string) {
         super();
-        this.storage = folder;
+
         this.ready = false;
         this.params = {};
-
+        this.storage = folder;
         this.init();
+    }
+
+    isReady() {
+        return this.ready;
+    }
+
+    getParams() {
+        return this.params;
     }
 
     private async init() {
@@ -62,11 +71,11 @@ export class ParamManager extends EventEmitter {
                 fs.writeFileSync(path.join(this.storage, 'packageconfigurations.json'), '{}');
             }
         } catch (err) {
-            logger.logError(err.toString());
+            logger.logError(errToString(err));
         }
     }
 
-    private configurationExist(paramName) {
+    private configurationExist(paramName: string) {
         return new Promise<boolean>((resolve) => {
             fs.access(path.join(this.storage, paramName + '.json'), (err) => {
                 if (err) {
@@ -97,7 +106,7 @@ export class ParamManager extends EventEmitter {
 
 export class ParamGroup extends EventEmitter {
     name: string;
-    value: object;
+    value: Record<string, any>;
     fileName: string;
     constructor(name: string, fileName: string) {
         super();
