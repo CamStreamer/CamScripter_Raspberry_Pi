@@ -14,7 +14,7 @@ pckgManager.on('ready', () => {
     marry(pckgManager, paramManager);
 });
 
-async function marry(pckgManager: PackageManager, paramManager: ParamManager) {
+function marry(pckgManager: PackageManager, paramManager: ParamManager) {
     if (pckgManager.isReady() && paramManager.isReady()) {
         pckgManager.connect(paramManager.getParams()['packageconfigurations']);
         logger.logInfo('Starting Camscripter Server');
@@ -26,9 +26,9 @@ async function marry(pckgManager: PackageManager, paramManager: ParamManager) {
 }
 
 process.on('uncaughtException', (err) => {
-    logger.logError('uncaughtException: ' + err.stack ?? err.toString());
+    logger.logError('uncaughtException: ' + (err.stack ?? err.toString()));
 });
 
-process.on('unhandledRejection - ', (err: Error) => {
-    logger.logError('unhandledRejection: ' + err.stack ?? err.toString());
+process.on('unhandledRejection', (err: Error) => {
+    logger.logError('unhandledRejection: ' + (err.stack ?? err.toString()));
 });

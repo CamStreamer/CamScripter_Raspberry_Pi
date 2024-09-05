@@ -78,7 +78,7 @@ export class CamScripterMonitor extends EventEmitter {
     }
 
     brutalize(process: cp.ChildProcess) {
-        if (process && process.exitCode === null) {
+        if (process.exitCode === null) {
             process.removeAllListeners();
             process.kill('SIGKILL');
         } else if (!this.enabled) {
@@ -108,7 +108,7 @@ export class CamScripterMonitor extends EventEmitter {
                 PERSISTENT_DATA_PATH: this.env.persistentDataPath.toString(),
             },
         });
-        if (!this.processControl) {
+        if (this.processControl === undefined) {
             return this.planChildProcessRestart();
         }
 

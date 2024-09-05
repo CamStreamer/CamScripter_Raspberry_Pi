@@ -61,7 +61,7 @@ export class PackageManager extends EventEmitter {
         this.pckdirWatch.on('ready', async () => {
             try {
                 await Promise.all(Object.values(this.packagesRegisterPrms));
-                for (let name in this.packages) {
+                for (const name in this.packages) {
                     logger.logInfo('Package ready ' + name);
                 }
             } catch (err) {
@@ -78,8 +78,8 @@ export class PackageManager extends EventEmitter {
         const settingsGlob = `${storage}/**/localdata/settings.json`;
         this.settingsWatch = chokidar.watch(settingsGlob, { depth: 2 });
         this.settingsWatch.on('change', (filePath) => {
-            let pathMembers = filePath.split('/');
-            let pckgName = pathMembers[pathMembers.length - 3];
+            const pathMembers = filePath.split('/');
+            const pckgName = pathMembers[pathMembers.length - 3];
             if (this.contains(pckgName)) {
                 this.packages[pckgName].restart('SIGINT');
             }
@@ -141,7 +141,7 @@ export class PackageManager extends EventEmitter {
 
             if (manifest.required_camscripter_rbi_version) {
                 const version = manifest.required_camscripter_rbi_version.split('.');
-                if (version.length != this.version.length) {
+                if (version.length !== this.version.length) {
                     throw new Error(
                         'Wrong manifest format: invalid format of required_camscripter_rbi_version attribute.'
                     );
@@ -177,8 +177,6 @@ export class PackageManager extends EventEmitter {
                     await fs.move(`${tmpPackagePath}`, `${this.storage}/${manifest.package_name}`, { overwrite: true });
                     await this.registerPackage(manifest.package_name);
                 }
-            } catch (err) {
-                throw err;
             } finally {
                 this.pckdirWatchPause = true;
                 this.unlock();
@@ -214,8 +212,11 @@ export class PackageManager extends EventEmitter {
         this.directiveParams.on('refresh', () => {
             if (!this.lockMode) {
                 logger.logInfo('Parameters applied!');
-                for (let name in this.packages) {
-                    if (params.value.hasOwnProperty(name) && params.value[name].enabled) {
+                for (const name in this.packages) {
+                    if (
+                        Object.prototype.hasOwnProperty.call(params.value, name) &&
+                        (params.value[name].enabled as boolean)
+                    ) {
                         this.packages[name].start();
                     } else {
                         this.packages[name].stop();
@@ -227,8 +228,8 @@ export class PackageManager extends EventEmitter {
     }
 
     listManifests(): Manifest[] {
-        let list: Manifest[] = [];
-        for (let pckgName in this.packages) {
+        const list: Manifest[] = [];
+        for (const pckgName in this.packages) {
             list.push(this.packages[pckgName].readManifest());
         }
         return list.sort((a, b) => {
@@ -282,15 +283,15 @@ export class Package {
     }
 
     readManifest(): Manifest {
-        let rawManifest = fs.readFileSync(path.join(this.storage, 'manifest.json'));
-        let manifest = JSON.parse(rawManifest.toString());
+        const rawManifest = fs.readFileSync(path.join(this.storage, 'manifest.json'));
+        const manifest = JSON.parse(rawManifest.toString());
         return manifest;
     }
 
     accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] | undefined {
-        let filePath = path.join(this.storage, 'html', path.normalize(rawPath));
+        const filePath = path.join(this.storage, 'html', path.normalize(rawPath));
         if (fs.pathExistsSync(filePath)) {
-            let stat = fs.statSync(filePath);
+            const stat = fs.statSync(filePath);
             return [stat, fs.createReadStream(filePath)];
         }
         return undefined;
@@ -298,7 +299,7 @@ export class Package {
 
     accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } | undefined {
         if (fs.pathExistsSync(this.logPath)) {
-            let stat = fs.statSync(this.logPath);
+            const stat = fs.statSync(this.logPath);
             return { stat, stream: fs.createReadStream(this.logPath, { end: stat.size }) };
         }
         return undefined;
@@ -332,7 +333,7 @@ export class Package {
 
     restart(signal?: NodeJS.Signals): void {
         if (this.enabled) {
-            let sig = signal || 'SIGTERM';
+            const sig = signal || 'SIGTERM';
             this.process.restart(sig);
         }
     }

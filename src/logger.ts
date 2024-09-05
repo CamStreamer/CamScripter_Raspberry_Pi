@@ -73,7 +73,7 @@ export class CustomLogger {
     private log2File(text: string): void {
         try {
             if (
-                this.options.maxFileSizeBytes &&
+                this.options.maxFileSizeBytes !== undefined &&
                 (this.lastLogSizeCheck === undefined || Date.now() - this.lastLogSizeCheck >= 3600 * 1000)
             ) {
                 this.lastLogSizeCheck = Date.now();

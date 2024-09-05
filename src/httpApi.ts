@@ -1,4 +1,5 @@
 import * as archiver from 'archiver';
+import * as formidable from 'formidable';
 import * as fs from 'fs-extra';
 import { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'http';
 import * as http_proxy from 'http-proxy';
@@ -19,8 +20,6 @@ import { HttpServer } from './httpServer';
 import { errToString, logger } from './logger';
 import { PackageManager } from './packageManager';
 import { ParamManager } from './paramManager';
-
-import formidable = require('formidable');
 
 const extMap: Record<string, string> = {
     '.htm': 'text/html',
@@ -76,17 +75,17 @@ export class HttpApi {
         }
 
         if (req.url.match(/\/package\//)) {
-            let startIndex = req.url.search(/package/);
-            let url = req.url.slice(startIndex);
-            let folders = url.split('/');
+            const startIndex = req.url.search(/package/);
+            const url = req.url.slice(startIndex);
+            const folders = url.split('/');
             if (folders.length <= 2) {
                 sendMessageResponse(res, ResponseCode.BAD_REQ, 'HTTPApi: invalid request');
             } else {
-                let pckgName = folders[1];
-                let filePath = '/' + folders.slice(2).join('/');
+                const pckgName = folders[1];
+                const filePath = '/' + folders.slice(2).join('/');
                 if (this.pckgManager.contains(pckgName)) {
-                    let parsed = path.parse(filePath);
-                    let read = this.pckgManager.getPackages()[pckgName].accessOnlineFile(filePath);
+                    const parsed = path.parse(filePath);
+                    const read = this.pckgManager.getPackages()[pckgName].accessOnlineFile(filePath);
                     if (read) {
                         const headers: OutgoingHttpHeaders = {
                             'Content-Length': read[0].size,
@@ -159,41 +158,47 @@ export class HttpApi {
         files: formidable.Files,
         fields: formidable.Fields
     ) {
-        let action = url.searchParams.get('action') || fields['action'].toString();
+        const action = url.searchParams.get('action') ?? fields['action'].toString();
         switch (action) {
-            case 'update':
-                for (let f in fields) {
-                    if (f === 'action') continue;
-                    let splitted = f.toLowerCase().split('.');
-                    if (splitted[0] != 'camscripter' || splitted.length !== 2) {
+            case 'update': {
+                for (const f in fields) {
+                    if (f === 'action') {
+                        continue;
+                    }
+                    const splitted = f.toLowerCase().split('.');
+                    if (splitted[0] !== 'camscripter' || splitted.length !== 2) {
                         sendMessageResponse(res, ResponseCode.BAD_REQ, 'Vapix-Sim: Unsupported parameters');
                     } else {
-                        let paramName = splitted[1];
-                        let value = fields[f];
-                        if (typeof value === 'string') this.paramManager.update(paramName, JSON.parse(value));
+                        const paramName = splitted[1];
+                        const value = fields[f];
+                        if (typeof value === 'string') {
+                            this.paramManager.update(paramName, JSON.parse(value));
+                        }
                     }
                 }
                 sendMessageResponse(res, ResponseCode.OK, 'OK');
                 break;
-
-            case 'list':
-                let groupName = url.searchParams.get('group')?.toLowerCase() ?? '';
-                let splitted = groupName.split('.');
-                if (splitted[0] != 'camscripter' || splitted.length !== 2) {
+            }
+            case 'list': {
+                const groupName = url.searchParams.get('group')?.toLowerCase() ?? '';
+                const splitted = groupName.split('.');
+                if (splitted[0] !== 'camscripter' || splitted.length !== 2) {
                     sendMessageResponse(res, ResponseCode.BAD_REQ, 'Vapix-Sim: Unsupported parameters');
                 } else {
-                    let paramName = splitted[1];
+                    const paramName = splitted[1];
                     sendParamResponse(res, ResponseCode.OK, groupName, this.paramManager.get(paramName));
                 }
                 break;
-            default:
+            }
+            default: {
                 sendMessageResponse(res, ResponseCode.BAD_REQ, 'Vapix-Sim: Unsupported action');
+            }
         }
     }
 
     private onSystemLogRequest(url: URL, req: IncomingMessage, res: ServerResponse) {
         const pckgName = url.searchParams.get('package_name');
-        if (pckgName) {
+        if (pckgName !== null) {
             if (pckgName === 'system') {
                 const filePath = Paths.SYSLOG;
                 if (fs.pathExistsSync(filePath)) {
@@ -243,7 +248,7 @@ export class HttpApi {
     ) {
         let returnCode = ResponseCode.OK;
         let returnMessage = 'OK';
-        for (let i in files) {
+        for (const i in files) {
             const file = Array.isArray(files[i]) ? files[i][0] : files[i];
             const name = path.parse(file['name'] ?? '');
             const filePath = file['path'];
@@ -272,8 +277,8 @@ export class HttpApi {
 
     private onPackageRemoveRequest(url: URL, req: IncomingMessage, res: ServerResponse) {
         try {
-            let pckgName = url.searchParams.get('package_name');
-            if (!pckgName) {
+            const pckgName = url.searchParams.get('package_name');
+            if (pckgName === null) {
                 sendJsonResponse(res, ResponseCode.BAD_REQ, {
                     message: 'No name provided!',
                 });
@@ -310,7 +315,7 @@ export class HttpApi {
         const pckgName = url.searchParams.get('package_name');
         const action = url.searchParams.get('action');
         const compressionLevel = parseInt(url.searchParams.get('compression_level') ?? '9');
-        if (!pckgName || !action) {
+        if (pckgName === null || action === null) {
             sendMessageResponse(res, ResponseCode.BAD_REQ, 'Crucial attributes missing!');
             return;
         }
@@ -324,10 +329,10 @@ export class HttpApi {
         const pckg = packages[pckgName];
         const localdataPath = pckg.envVars.persistentDataPath;
         switch (action) {
-            case 'IMPORT':
+            case 'IMPORT': {
                 let returnCode = ResponseCode.OK;
                 let returnMessage = 'OK';
-                for (let i in files) {
+                for (const i in files) {
                     const file = Array.isArray(files[i]) ? files[i][0] : files[i];
                     const fileName = path.parse(file['name'] ?? '');
                     const filePath = file['path'];
@@ -349,13 +354,14 @@ export class HttpApi {
                         returnCode = ResponseCode.INTERNAL_ERROR;
                         returnMessage = err instanceof Error ? err.message : 'Unknown error';
                     } finally {
-                        fs.remove(tmpPckgDir);
-                        fs.remove(filePath);
+                        await fs.remove(tmpPckgDir);
+                        await fs.remove(filePath);
                     }
                 }
                 sendMessageResponse(res, returnCode, returnMessage);
                 break;
-            case 'EXPORT':
+            }
+            case 'EXPORT': {
                 const archie = archiver('zip', {
                     zlib: { level: compressionLevel || 9 },
                 });
@@ -370,15 +376,17 @@ export class HttpApi {
                 archie.directory(localdataPath, false);
                 await archie.finalize();
                 break;
-            default:
+            }
+            default: {
                 sendMessageResponse(res, ResponseCode.BAD_REQ, 'Invalid action');
+            }
         }
     }
 
     private onPackageSettingsRequest(url: URL, req: IncomingMessage, res: ServerResponse) {
         const pckgName = url.searchParams.get('package_name');
         const action = url.searchParams.get('action');
-        if (!pckgName || !action) {
+        if (pckgName === null || action === null) {
             sendMessageResponse(res, ResponseCode.BAD_REQ, 'Crucial attributes missing!');
         } else {
             switch (action) {
@@ -393,7 +401,7 @@ export class HttpApi {
                 case 'set':
                     if (this.pckgManager.contains(pckgName)) {
                         try {
-                            let settingsData: Buffer[] = [];
+                            const settingsData: Buffer[] = [];
                             req.on('data', (chunk: Buffer) => {
                                 settingsData.push(chunk);
                             });
@@ -433,7 +441,7 @@ export class HttpApi {
         delete req.headers['x-target-camera-pass'];
 
         const proxy = new HttpProxy();
-        proxy.request(target, req, res);
+        await proxy.request(target, req, res);
     }
 
     private extractArchive(archive: string, dirName: string) {
@@ -466,7 +474,7 @@ export class HttpApi {
 
                         const parsedPath = path.parse(filePath);
                         fs.mkdir(parsedPath.dir, { recursive: true }, (error) => {
-                            if (error) {
+                            if (error !== undefined) {
                                 zip.emit('error', error);
                                 return;
                             }

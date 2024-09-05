@@ -70,9 +70,9 @@ export class HttpServer extends EventEmitter {
         const url = new URL(req.url ?? '', this.serverOrigin);
         logger.logVerbose('Http-Server: CGI Request' + req.url);
         let matched = false;
-        for (let cgiUrl of this.dataHandlesList) {
+        for (const cgiUrl of this.dataHandlesList) {
             if (url.pathname.match(cgiUrl)) {
-                let form = formidable({
+                const form = formidable({
                     multiples: false,
                     uploadDir: process.cwd() + '/tmp',
                 });
@@ -83,7 +83,7 @@ export class HttpServer extends EventEmitter {
                 break;
             }
         }
-        for (let cgiUrl of this.requestHandlesList) {
+        for (const cgiUrl of this.requestHandlesList) {
             if (url.pathname.match(cgiUrl)) {
                 this.requestHandles[cgiUrl](url, req, res);
                 matched = true;

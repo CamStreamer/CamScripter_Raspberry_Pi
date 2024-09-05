@@ -19,8 +19,8 @@ export class HttpProxy {
             let proxyRes = await this.sendProxyRequest(target, req);
             if (
                 proxyRes.statusCode === 401 &&
-                proxyRes.headers['www-authenticate'] != undefined &&
-                proxyRes.headers['www-authenticate'].indexOf('Digest') != -1
+                proxyRes.headers['www-authenticate'] !== undefined &&
+                proxyRes.headers['www-authenticate'].indexOf('Digest') !== -1
             ) {
                 proxyRes = await this.sendProxyRequest(target, req, proxyRes.headers['www-authenticate']);
             }
