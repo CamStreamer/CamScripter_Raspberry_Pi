@@ -20,6 +20,7 @@ import { HttpServer } from './httpServer';
 import { errToString, logger } from './logger';
 import { PackageManager } from './packageManager';
 import { ParamManager } from './paramManager';
+import { MdnsResponse, Zeroconf } from './zeroconf';
 
 const extMap: Record<string, string> = {
     '.htm': 'text/html',
@@ -64,6 +65,7 @@ export class HttpApi {
         httpServer.registerDataCGI('/package/data.cgi', this.onPackageDataRequest.bind(this));
         httpServer.registerRequestCGI('/package/settings.cgi', this.onPackageSettingsRequest.bind(this));
         httpServer.registerRequestCGI('/proxy.cgi', this.onCameraProxyRequest.bind(this));
+        httpServer.registerRequestCGI('/network_camera_list.cgi', this.onNetworkCameraListRequest.bind(this));
 
         httpServer.start(host, port);
     }
@@ -442,6 +444,32 @@ export class HttpApi {
 
         const proxy = new HttpProxy();
         await proxy.request(target, req, res);
+    }
+
+    private async onNetworkCameraListRequest(url: URL, req: IncomingMessage, res: ServerResponse) {
+        const zeroconf = new Zeroconf(['_axis-video._tcp.local']);
+
+        const deviceList = await zeroconf.resolve(2000);
+        if (deviceList === undefined) {
+            sendMessageResponse(res, ResponseCode.INTERNAL_ERROR, 'Zeroconf error');
+            return;
+        }
+
+        const deviceListFiltered = deviceList.filter((device: MdnsResponse) => {
+            return device.domainName.toLowerCase().indexOf('axis') !== -1 && device.addr.indexOf('"169.254."') === -1;
+        });
+
+        const deviceListSorted = deviceListFiltered.sort((a: MdnsResponse, b: MdnsResponse) => {
+            return a.domainName.localeCompare(b.domainName);
+        });
+
+        const deviceListResult = deviceListSorted.map((device: MdnsResponse) => {
+            return {
+                name: device.domainName.split('._')[0],
+                ip: device.addr,
+            };
+        });
+        sendJsonResponse(res, ResponseCode.OK, { message: JSON.stringify(deviceListResult) });
     }
 
     private extractArchive(archive: string, dirName: string) {

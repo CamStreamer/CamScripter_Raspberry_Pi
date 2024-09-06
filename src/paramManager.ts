@@ -108,7 +108,7 @@ export class ParamGroup extends EventEmitter {
     name: string;
     value: Record<string, any>;
     fileName: string;
-    
+
     constructor(name: string, fileName: string) {
         super();
         const rawJson = fs.readFileSync(fileName);
