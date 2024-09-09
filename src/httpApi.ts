@@ -475,14 +475,14 @@ export class HttpApi {
     private extractArchive(archive: string, dirName: string) {
         return new Promise<void>((resolve, reject) => {
             yauzl.open(archive, { lazyEntries: true }, (error, zip) => {
-                if (error !== undefined) {
+                if (error !== null) {
                     reject(error);
                     return;
                 }
 
-                zip.on('entry', (entry) => {
+                zip.on('entry', (entry: yauzl.Entry) => {
                     zip.openReadStream(entry, (error, readStream) => {
-                        if (error) {
+                        if (error !== null) {
                             zip.emit('error', error);
                             return;
                         }
@@ -491,18 +491,18 @@ export class HttpApi {
                         const filePath = path.join(dirName, entry.fileName);
                         if (filePath.lastIndexOf('/') === filePath.length - 1) {
                             fs.mkdir(filePath, { recursive: true }, (error) => {
-                                if (error !== undefined) {
+                                if (error !== null) {
                                     zip.emit('error', error);
                                     return;
                                 }
                                 zip.readEntry();
-                                return;
                             });
+                            return;
                         }
 
                         const parsedPath = path.parse(filePath);
                         fs.mkdir(parsedPath.dir, { recursive: true }, (error) => {
-                            if (error !== undefined) {
+                            if (error !== null) {
                                 zip.emit('error', error);
                                 return;
                             }
