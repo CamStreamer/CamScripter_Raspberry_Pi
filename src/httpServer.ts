@@ -15,14 +15,13 @@ type DataHandle = {
 };
 
 export class HttpServer extends EventEmitter {
-    server: Server;
-    running: boolean;
-    requestHandles: { [key: string]: RequestHandle };
-    requestHandlesList: string[];
-    dataHandles: { [key: string]: DataHandle };
-    dataHandlesList: string[];
-    extMap: { [key: string]: string };
-    serverOrigin: string;
+    private server: Server;
+    private running: boolean;
+    private requestHandles: { [key: string]: RequestHandle };
+    private requestHandlesList: string[];
+    private dataHandles: { [key: string]: DataHandle };
+    private dataHandlesList: string[];
+    private serverOrigin: string;
 
     constructor() {
         super();
@@ -36,7 +35,7 @@ export class HttpServer extends EventEmitter {
 
         this.server.on('request', (req: IncomingMessage, res: ServerResponse) => {
             logger.logInfo('Http-Server: Incomming request ' + req.url);
-            const url = new URL(req.url, this.serverOrigin);
+            const url = new URL(req.url ?? '', this.serverOrigin);
             const ext = path.parse(url.pathname).ext;
             if (url.pathname.match(/\/proxy\//)) {
                 this.emit('proxy', req, res, false);
@@ -48,36 +47,6 @@ export class HttpServer extends EventEmitter {
                 this.emit('filerequest', req, res);
             }
         });
-    }
-
-    private handleCGI(req: IncomingMessage, res: ServerResponse) {
-        const url = new URL(req.url, this.serverOrigin);
-        logger.logVerbose('Http-Server: CGI Request' + req.url);
-        let matched = false;
-        for (let cgiUrl of this.dataHandlesList) {
-            if (url.pathname.match(cgiUrl)) {
-                let form = formidable({
-                    multiples: false,
-                    uploadDir: process.cwd() + '/tmp',
-                });
-                form.parse(req, (err, fields, files) => {
-                    this.dataHandles[cgiUrl](url, req, res, files, fields);
-                });
-                matched = true;
-                break;
-            }
-        }
-        for (let cgiUrl of this.requestHandlesList) {
-            if (url.pathname.match(cgiUrl)) {
-                this.requestHandles[cgiUrl](url, req, res);
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) {
-            logger.logWarning('Http-Server: No valid CGI');
-            res.end('CGI ' + url.pathname + " can't be resolved");
-        }
     }
 
     start(host: string, port: number): void {
@@ -95,5 +64,35 @@ export class HttpServer extends EventEmitter {
     registerDataCGI(path: string, handle: DataHandle): void {
         this.dataHandlesList.push(path);
         this.dataHandles[path] = handle;
+    }
+
+    private handleCGI(req: IncomingMessage, res: ServerResponse) {
+        const url = new URL(req.url ?? '', this.serverOrigin);
+        logger.logVerbose('Http-Server: CGI Request' + req.url);
+        let matched = false;
+        for (const cgiUrl of this.dataHandlesList) {
+            if (url.pathname.match(cgiUrl)) {
+                const form = formidable({
+                    multiples: false,
+                    uploadDir: process.cwd() + '/tmp',
+                });
+                form.parse(req, (err, fields, files) => {
+                    this.dataHandles[cgiUrl](url, req, res, files, fields);
+                });
+                matched = true;
+                break;
+            }
+        }
+        for (const cgiUrl of this.requestHandlesList) {
+            if (url.pathname.match(cgiUrl)) {
+                this.requestHandles[cgiUrl](url, req, res);
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            logger.logWarning('Http-Server: No valid CGI');
+            res.end('CGI ' + url.pathname + " can't be resolved");
+        }
     }
 }

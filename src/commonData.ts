@@ -7,8 +7,8 @@ export enum Paths {
 
 export function getVersion(): string[] {
     if (fs.existsSync(Paths.PACKAGE_JSON)) {
-        let rawPckg = fs.readFileSync(Paths.PACKAGE_JSON);
-        let pckg = JSON.parse(rawPckg.toString());
+        const rawPckg = fs.readFileSync(Paths.PACKAGE_JSON);
+        const pckg = JSON.parse(rawPckg.toString());
         return pckg['version'].split('.');
     }
     throw 'No version file found!';

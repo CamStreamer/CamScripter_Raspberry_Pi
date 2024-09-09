@@ -16,8 +16,16 @@ export type LoggerOptions = {
     maxFileSizeBytes?: number;
 };
 
+export function errToString(err: unknown) {
+    if (err instanceof Error) {
+        return err.stack ?? err.toString();
+    } else {
+        return 'Unknown error';
+    }
+}
+
 export class CustomLogger {
-    private lastLogSizeCheck;
+    private lastLogSizeCheck?: number;
 
     constructor(private options: LoggerOptions) {}
 
@@ -65,7 +73,7 @@ export class CustomLogger {
     private log2File(text: string): void {
         try {
             if (
-                this.options.maxFileSizeBytes &&
+                this.options.maxFileSizeBytes !== undefined &&
                 (this.lastLogSizeCheck === undefined || Date.now() - this.lastLogSizeCheck >= 3600 * 1000)
             ) {
                 this.lastLogSizeCheck = Date.now();

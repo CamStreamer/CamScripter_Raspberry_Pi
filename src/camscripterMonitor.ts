@@ -1,6 +1,5 @@
 import * as cp from 'child_process';
 import { EventEmitter } from 'events';
-import { WriteStream } from 'fs';
 import * as readline from 'readline';
 import { Duplex, Stream } from 'stream';
 
@@ -10,25 +9,21 @@ import { CustomLogger, logger, LogLevel } from './logger';
 export type MonitorOptions = {
     env: Enviroment;
     cwd: string;
-    spinTime?: number;
     logPath: string;
 };
 
 export class CamScripterMonitor extends EventEmitter {
-    path: string;
-    spinTime: number;
-    enabled: boolean;
-    env: Enviroment;
-    cwd: string;
-    logPath: string;
-    processLogger: CustomLogger;
-    processControl: cp.ChildProcess;
-    processStream: Duplex;
-    processLog: readline.ReadLine;
-    fileStream: WriteStream;
-    restartTimeout: NodeJS.Timeout;
-    restartDelay = 5000;
-    readonly defaultRestartDelay = 5000;
+    private path: string;
+    private enabled: boolean;
+    private env: Enviroment;
+    private cwd: string;
+    private processLogger: CustomLogger;
+    private processControl?: cp.ChildProcess;
+    private processStream?: Duplex;
+    private processLog?: readline.ReadLine;
+    private restartTimeout?: NodeJS.Timeout;
+    private restartDelay = 5000;
+    private readonly defaultRestartDelay = 5000;
 
     constructor(path: string, options: MonitorOptions) {
         super();
@@ -36,8 +31,6 @@ export class CamScripterMonitor extends EventEmitter {
         this.path = path;
         this.env = options.env;
         this.cwd = options.cwd;
-        this.spinTime = options.spinTime;
-        this.logPath = options.logPath;
         this.processLogger = new CustomLogger({
             path: options.logPath,
             level: LogLevel.VERBOSE,
@@ -85,7 +78,7 @@ export class CamScripterMonitor extends EventEmitter {
     }
 
     brutalize(process: cp.ChildProcess) {
-        if (process && process.exitCode === null) {
+        if (process.exitCode === null) {
             process.removeAllListeners();
             process.kill('SIGKILL');
         } else if (!this.enabled) {
@@ -115,21 +108,33 @@ export class CamScripterMonitor extends EventEmitter {
                 PERSISTENT_DATA_PATH: this.env.persistentDataPath.toString(),
             },
         });
-        this.processControl.stderr.pipe(this.processStream);
-        this.processControl.stdout.pipe(this.processStream);
+        if (this.processControl === undefined) {
+            return this.planChildProcessRestart();
+        }
+
+        if (this.processControl.stdout) {
+            this.processControl.stdout.pipe(this.processStream);
+        }
+        if (this.processControl.stderr) {
+            this.processControl.stderr.pipe(this.processStream);
+        }
         this.processControl.on('error', (err) => {
             logger.logError('Error in process ' + this.path + ': ' + err);
         });
 
         this.processControl.on('close', (code, signal) => {
-            this.processControl.removeAllListeners();
-            this.restartTimeout = setTimeout(() => {
-                this.restartDelay = this.defaultRestartDelay;
-                if (this.enabled) {
-                    this.newChildProcess();
-                    this.emit('restart');
-                }
-            }, this.restartDelay);
+            this.processControl?.removeAllListeners();
+            this.planChildProcessRestart();
         });
+    }
+
+    private planChildProcessRestart() {
+        this.restartTimeout = setTimeout(() => {
+            this.restartDelay = this.defaultRestartDelay;
+            if (this.enabled) {
+                this.newChildProcess();
+                this.emit('restart');
+            }
+        }, this.restartDelay);
     }
 }

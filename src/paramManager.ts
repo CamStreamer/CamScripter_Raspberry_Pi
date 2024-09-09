@@ -3,20 +3,29 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { logger } from './logger';
+import { errToString, logger } from './logger';
 
 export class ParamManager extends EventEmitter {
-    storage: string;
-    params: { [key: string]: ParamGroup };
-    watchDog: chokidar.FSWatcher;
-    ready: boolean;
+    private storage: string;
+    private ready: boolean;
+    private params: { [key: string]: ParamGroup };
+    private watchDog!: chokidar.FSWatcher;
+
     constructor(folder: string) {
         super();
-        this.storage = folder;
+
         this.ready = false;
         this.params = {};
+        this.storage = folder;
+        void this.init();
+    }
 
-        this.init();
+    isReady() {
+        return this.ready;
+    }
+
+    getParams() {
+        return this.params;
     }
 
     private async init() {
@@ -24,7 +33,7 @@ export class ParamManager extends EventEmitter {
 
         this.watchDog = chokidar.watch(this.storage);
         this.watchDog.on('add', (pathFile) => {
-            let parsed = path.parse(pathFile);
+            const parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
                 this.params[parsed.name] = new ParamGroup(parsed.name, pathFile);
             }
@@ -32,7 +41,7 @@ export class ParamManager extends EventEmitter {
         });
 
         this.watchDog.on('change', (pathFile) => {
-            let parsed = path.parse(pathFile);
+            const parsed = path.parse(pathFile);
             if (parsed.ext === '.json') {
                 logger.logInfo('Refreshing: ' + parsed.name);
                 this.params[parsed.name].refresh();
@@ -41,9 +50,9 @@ export class ParamManager extends EventEmitter {
         });
 
         this.watchDog.on('ready', () => {
-            let filenames = fs.readdirSync(this.storage);
+            const filenames = fs.readdirSync(this.storage);
             filenames.forEach((file) => {
-                let parsed = path.parse(file);
+                const parsed = path.parse(file);
                 if (parsed.ext === '.json') {
                     logger.logDebug('Param loaded: ' + parsed.name);
                     this.params[parsed.name] = new ParamGroup(parsed.name, path.join(this.storage, file));
@@ -62,11 +71,11 @@ export class ParamManager extends EventEmitter {
                 fs.writeFileSync(path.join(this.storage, 'packageconfigurations.json'), '{}');
             }
         } catch (err) {
-            logger.logError(err.toString());
+            logger.logError(errToString(err));
         }
     }
 
-    private configurationExist(paramName) {
+    private configurationExist(paramName: string) {
         return new Promise<boolean>((resolve) => {
             fs.access(path.join(this.storage, paramName + '.json'), (err) => {
                 if (err) {
@@ -97,11 +106,12 @@ export class ParamManager extends EventEmitter {
 
 export class ParamGroup extends EventEmitter {
     name: string;
-    value: object;
+    value: Record<string, any>;
     fileName: string;
+
     constructor(name: string, fileName: string) {
         super();
-        let rawJson = fs.readFileSync(fileName);
+        const rawJson = fs.readFileSync(fileName);
         this.fileName = fileName;
         this.name = name;
         this.value = JSON.parse(rawJson.toString());
@@ -113,7 +123,7 @@ export class ParamGroup extends EventEmitter {
     }
 
     refresh(): void {
-        let rawJson = fs.readFileSync(this.fileName);
+        const rawJson = fs.readFileSync(this.fileName);
         this.value = JSON.parse(rawJson.toString());
         logger.logDebug(`Parameter ${this.name} new value: ${JSON.stringify(this.value)}`);
         this.emit('refresh');

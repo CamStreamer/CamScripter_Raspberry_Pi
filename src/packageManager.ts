@@ -7,7 +7,7 @@ import * as path from 'path';
 
 import { CamScripterMonitor } from './camscripterMonitor';
 import { Enviroment } from './commonData';
-import { logger } from './logger';
+import { errToString, logger } from './logger';
 import { ParamGroup } from './paramManager';
 
 type Manifest = {
@@ -18,17 +18,17 @@ type Manifest = {
 };
 
 export class PackageManager extends EventEmitter {
-    storage: string;
-    logsStorage: string;
-    packages: Record<string, Package>;
-    packagesRegisterPrms: Record<string, Promise<void>>;
-    pckdirWatch: chokidar.FSWatcher;
-    pckdirWatchPause: boolean;
-    settingsWatch: chokidar.FSWatcher;
-    directiveParams: ParamGroup;
-    version: string[];
-    lockMode: boolean;
-    ready: boolean;
+    private storage: string;
+    private logsStorage: string;
+    private packages: Record<string, Package>;
+    private packagesRegisterPrms: Record<string, Promise<void>>;
+    private pckdirWatch: chokidar.FSWatcher;
+    private pckdirWatchPause: boolean;
+    private settingsWatch: chokidar.FSWatcher;
+    private directiveParams?: ParamGroup;
+    private version: string[];
+    private lockMode: boolean;
+    private ready: boolean;
 
     constructor(storage: string, logsStorage: string, version: string[]) {
         super();
@@ -61,11 +61,11 @@ export class PackageManager extends EventEmitter {
         this.pckdirWatch.on('ready', async () => {
             try {
                 await Promise.all(Object.values(this.packagesRegisterPrms));
-                for (let name in this.packages) {
+                for (const name in this.packages) {
                     logger.logInfo('Package ready ' + name);
                 }
             } catch (err) {
-                logger.logError(`Package initialization error: ${err.message}`);
+                logger.logError(`Package initialization error: ${errToString(err)}`);
             } finally {
                 this.ready = true;
                 this.emit('ready');
@@ -78,12 +78,20 @@ export class PackageManager extends EventEmitter {
         const settingsGlob = `${storage}/**/localdata/settings.json`;
         this.settingsWatch = chokidar.watch(settingsGlob, { depth: 2 });
         this.settingsWatch.on('change', (filePath) => {
-            let pathMembers = filePath.split('/');
-            let pckgName = pathMembers[pathMembers.length - 3];
+            const pathMembers = filePath.split('/');
+            const pckgName = pathMembers[pathMembers.length - 3];
             if (this.contains(pckgName)) {
                 this.packages[pckgName].restart('SIGINT');
             }
         });
+    }
+
+    isReady() {
+        return this.ready;
+    }
+
+    getPackages() {
+        return this.packages;
     }
 
     async registerPackage(packageName: string) {
@@ -133,7 +141,7 @@ export class PackageManager extends EventEmitter {
 
             if (manifest.required_camscripter_rbi_version) {
                 const version = manifest.required_camscripter_rbi_version.split('.');
-                if (version.length != this.version.length) {
+                if (version.length !== this.version.length) {
                     throw new Error(
                         'Wrong manifest format: invalid format of required_camscripter_rbi_version attribute.'
                     );
@@ -169,8 +177,6 @@ export class PackageManager extends EventEmitter {
                     await fs.move(`${tmpPackagePath}`, `${this.storage}/${manifest.package_name}`, { overwrite: true });
                     await this.registerPackage(manifest.package_name);
                 }
-            } catch (err) {
-                throw err;
             } finally {
                 this.pckdirWatchPause = true;
                 this.unlock();
@@ -187,9 +193,7 @@ export class PackageManager extends EventEmitter {
     }
     unlock() {
         this.lockMode = false;
-        if (this.directiveParams) {
-            this.directiveParams.refresh();
-        }
+        this.directiveParams?.refresh();
     }
 
     uninstallPackage(name: string) {
@@ -208,8 +212,11 @@ export class PackageManager extends EventEmitter {
         this.directiveParams.on('refresh', () => {
             if (!this.lockMode) {
                 logger.logInfo('Parameters applied!');
-                for (let name in this.packages) {
-                    if (name in params.value && params.value[name].enabled) {
+                for (const name in this.packages) {
+                    if (
+                        Object.prototype.hasOwnProperty.call(params.value, name) &&
+                        (params.value[name].enabled as boolean)
+                    ) {
                         this.packages[name].start();
                     } else {
                         this.packages[name].stop();
@@ -221,8 +228,8 @@ export class PackageManager extends EventEmitter {
     }
 
     listManifests(): Manifest[] {
-        let list: Manifest[] = [];
-        for (let pckgName in this.packages) {
+        const list: Manifest[] = [];
+        for (const pckgName in this.packages) {
             list.push(this.packages[pckgName].readManifest());
         }
         return list.sort((a, b) => {
@@ -276,28 +283,26 @@ export class Package {
     }
 
     readManifest(): Manifest {
-        let rawManifest = fs.readFileSync(path.join(this.storage, 'manifest.json'));
-        let manifest = JSON.parse(rawManifest.toString());
+        const rawManifest = fs.readFileSync(path.join(this.storage, 'manifest.json'));
+        const manifest = JSON.parse(rawManifest.toString());
         return manifest;
     }
 
-    accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] {
-        let filePath = path.join(this.storage, 'html', path.normalize(rawPath));
+    accessOnlineFile(rawPath: string): [fs.Stats, fs.ReadStream] | undefined {
+        const filePath = path.join(this.storage, 'html', path.normalize(rawPath));
         if (fs.pathExistsSync(filePath)) {
-            let stat = fs.statSync(filePath);
+            const stat = fs.statSync(filePath);
             return [stat, fs.createReadStream(filePath)];
-        } else {
-            return null;
         }
+        return undefined;
     }
 
-    accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } {
+    accessLogFile(): { stat: fs.Stats; stream: fs.ReadStream } | undefined {
         if (fs.pathExistsSync(this.logPath)) {
-            let stat = fs.statSync(this.logPath);
+            const stat = fs.statSync(this.logPath);
             return { stat, stream: fs.createReadStream(this.logPath, { end: stat.size }) };
-        } else {
-            return null;
         }
+        return undefined;
     }
 
     getSettings(): object {
@@ -306,7 +311,7 @@ export class Package {
             try {
                 return fs.readJSONSync(setPath);
             } catch (err) {
-                logger.logError(err);
+                logger.logError(errToString(err));
                 return {};
             }
         } else {
@@ -328,7 +333,7 @@ export class Package {
 
     restart(signal?: NodeJS.Signals): void {
         if (this.enabled) {
-            let sig = signal || 'SIGTERM';
+            const sig = signal || 'SIGTERM';
             this.process.restart(sig);
         }
     }
