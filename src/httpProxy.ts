@@ -54,7 +54,7 @@ export class HttpProxy {
                 path: target.path,
                 auth: target.username + ':' + target.password,
                 timeout: 10000,
-                headers: req.headers,
+                headers: req.headers ?? {},
                 rejectUnauthorized: target.protocol === 'https',
             };
             if (
@@ -64,15 +64,15 @@ export class HttpProxy {
                 options.path !== null
             ) {
                 delete options.auth;
-                options.headers ??= {};
-
-                options.headers['Authorization'] = Digest.getAuthHeader(
+                options.headers!['authorization'] = Digest.getAuthHeader(
                     target.username,
                     target.password,
                     options.method,
                     options.path,
                     digestHeader
                 );
+            } else {
+                delete options.headers!['authorization'];
             }
 
             const client = target.protocol === 'http' ? http : https;
