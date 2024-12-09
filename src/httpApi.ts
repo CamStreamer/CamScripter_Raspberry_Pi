@@ -469,7 +469,7 @@ export class HttpApi {
                 ip: device.addr,
             };
         });
-        sendJsonResponse(res, ResponseCode.OK, { message: JSON.stringify(deviceListResult) });
+        sendJsonResponse(res, ResponseCode.OK, { message: JSON.stringify({ camera_list: deviceListResult }) });
     }
 
     private extractArchive(archive: string, dirName: string) {
