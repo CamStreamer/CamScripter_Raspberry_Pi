@@ -455,9 +455,14 @@ export class HttpApi {
             return;
         }
 
-        const deviceListFiltered = deviceList.filter((device: MdnsResponse) => {
-            return device.domainName.toLowerCase().indexOf('axis') !== -1 && device.addr.indexOf('"169.254."') === -1;
-        });
+        const deviceListFiltered = deviceList
+            .map((device: MdnsResponse) => {
+                device.addr = device.addr.filter(addr => !addr.startsWith('169.254.'));
+                return device;
+            })
+            .filter((device: MdnsResponse) => {
+                return device.domainName.toLowerCase().indexOf('axis') !== -1 && device.addr.length !== 0;
+            });
 
         const deviceListSorted = deviceListFiltered.sort((a: MdnsResponse, b: MdnsResponse) => {
             return a.domainName.localeCompare(b.domainName);
@@ -466,7 +471,7 @@ export class HttpApi {
         const deviceListResult = deviceListSorted.map((device: MdnsResponse) => {
             return {
                 name: device.domainName.split('._')[0],
-                ip: device.addr,
+                ip: device.addr[0],
             };
         });
         sendJsonResponse(res, ResponseCode.OK, { message: JSON.stringify({ camera_list: deviceListResult }) });
