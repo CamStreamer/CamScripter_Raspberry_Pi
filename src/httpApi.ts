@@ -457,7 +457,7 @@ export class HttpApi {
 
         const deviceListFiltered = deviceList
             .map((device: MdnsResponse) => {
-                device.addr = device.addr.filter(addr => !addr.startsWith('169.254.'));
+                device.addr = device.addr.filter((addr) => !addr.startsWith('169.254.'));
                 return device;
             })
             .filter((device: MdnsResponse) => {
