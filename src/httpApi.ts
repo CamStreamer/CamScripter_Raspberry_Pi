@@ -360,6 +360,9 @@ export class HttpApi {
                         await fs.remove(filePath);
                     }
                 }
+                this.pckgManager.setSettingsListeners();
+                pckg.restart('SIGINT');
+
                 sendMessageResponse(res, returnCode, returnMessage);
                 break;
             }
