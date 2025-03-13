@@ -24,7 +24,7 @@ export class PackageManager extends EventEmitter {
     private packagesRegisterPrms: Record<string, Promise<void>>;
     private pckdirWatch: chokidar.FSWatcher;
     private pckdirWatchPause: boolean;
-    private settingsWatch: chokidar.FSWatcher;
+    private settingsWatch?: chokidar.FSWatcher;
     private directiveParams?: ParamGroup;
     private version: string[];
     private lockMode: boolean;
@@ -75,15 +75,21 @@ export class PackageManager extends EventEmitter {
             logger.logError(`Package watcher error: ${err.message}`);
         });
 
-        const settingsGlob = `${storage}/**/localdata/settings.json`;
+        this.setSettingsListeners();
+    }
+
+    setSettingsListeners() {
+        const settingsGlob = `${this.storage}/**/localdata/settings.json`;
         this.settingsWatch = chokidar.watch(settingsGlob, { depth: 2 });
-        this.settingsWatch.on('change', (filePath) => {
-            const pathMembers = filePath.split('/');
-            const pckgName = pathMembers[pathMembers.length - 3];
-            if (this.contains(pckgName)) {
-                this.packages[pckgName].restart('SIGINT');
-            }
-        });
+        this.settingsWatch.on('change', this.onSettingsChange.bind(this));
+    }
+
+    private onSettingsChange(filePath: string) {
+        const pathMembers = filePath.split('/');
+        const pckgName = pathMembers[pathMembers.length - 3];
+        if (this.contains(pckgName)) {
+            this.packages[pckgName].restart('SIGINT');
+        }
     }
 
     isReady() {
