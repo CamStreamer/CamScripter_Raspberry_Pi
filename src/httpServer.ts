@@ -34,7 +34,7 @@ export class HttpServer extends EventEmitter {
         this.server = createServer();
 
         this.server.on('request', (req: IncomingMessage, res: ServerResponse) => {
-            logger.logInfo('Http-Server: Incomming request ' + req.url);
+            logger.logInfo('Http-Server: Incoming request ' + req.url);
             const url = new URL(req.url ?? '', this.serverOrigin);
             const ext = path.parse(url.pathname).ext;
             if (url.pathname.match(/\/proxy\//)) {
