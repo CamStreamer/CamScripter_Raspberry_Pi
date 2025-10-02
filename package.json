@@ -64,7 +64,7 @@
         "@types/formidable": "^1.2.2",
         "@types/fs-extra": "^9.0.11",
         "@types/http-proxy": "^1.17.6",
-        "@types/node": "^18.19.50",
+        "@types/node": "^18.19.129",
         "@types/ws": "^7.4.7",
         "@types/yauzl": "^2.10.3",
         "@typescript-eslint/eslint-plugin": "^8.4.0",
